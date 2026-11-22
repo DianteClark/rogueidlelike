@@ -218,7 +218,7 @@ Spend between runs on:
 2. ✅ Building placement (houses); house cap; pawn arrival. Random island per run. Kingdom select. *(upgrades: later)*
 3. ✅ Battle engine + first campaign region (Goblin Coast). *(terrain bonuses on the battle board: next)*
 4. ✅ Heroes: roster, summoning, levels, team screen.
-5. Raids: Gentle tier, garrison slots, tower defense on the island.
+5. ✅ Raids: Gentle tier, guard slots, towers. *(walls, more tribes: next)*
 6. ✅ Idle rewards and "While you were away" screen.
 7. Hero states + Monastery; Real Stakes raids; resource trips with escorts.
 8. Sieges, Castle falls, run end, Legacy and the meta screen.

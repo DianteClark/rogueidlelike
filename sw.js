@@ -1,5 +1,5 @@
 // Service worker: code is network-first (so updates arrive), art is cache-first (fast + offline).
-const VERSION = 'v7';
+const VERSION = 'v9';
 const CODE = 'code-' + VERSION;
 const ART = 'art-' + VERSION;
 

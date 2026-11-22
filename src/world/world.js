@@ -6,8 +6,12 @@ import { Pawn, JOBS } from './pawn.js';
 import { BUILDINGS, NATURE, FX, ICONS, TILE } from '../data/art.js';
 import { img } from '../engine/assets.js';
 import { KINGDOMS, mod } from '../data/kingdoms.js';
-import { makeHero, SUMMON_COST, FREE_SUMMONS, TEAM_SIZE, BASE_ROSTER, levelCost, MAX_LEVEL, addXp } from '../game/heroes.js';
+import { makeHero, SUMMON_COST, FREE_SUMMONS, TEAM_SIZE, BASE_ROSTER, levelCost, MAX_LEVEL, addXp, xpToLevel } from '../game/heroes.js';
 import { REGIONS } from '../data/units.js';
+import { Raid, planRaid, raidPower } from '../battle/raid.js';
+import { power } from '../game/heroes.js';
+
+const FIRST_RAID = 240, RAID_GAP = [360, 600], RAID_WARN = 90, GUARD_CAP = 3;
 
 const T = TILE;
 export const SAVE_KEY = 'tinycrowns.save.v2';
@@ -30,7 +34,8 @@ export class World {
     this.decor = []; this.effects = [];
     this.time = 0; this.hungry = false; this.eatT = 0; this.arriveT = 0; this.sheepT = 0;
     this.placing = null;
-    this.heroes = []; this.team = []; this.freeSummons = FREE_SUMMONS;
+    this.heroes = []; this.team = []; this.guards = []; this.freeSummons = FREE_SUMMONS;
+    this.raid = null; this.raidAt = null; this.raidPlan = null;
     this.campaign = { region: 0, stage: 1, best: 0 };
     this.clouds = Array.from({ length: 3 }, (_, i) => ({ i: (i * 3) % 8, x: Math.random() * 2000 - 600, y: Math.random() * 1600, s: 7 + Math.random() * 6 }));
   }
@@ -60,6 +65,8 @@ export class World {
       save.stones?.forEach((s, i) => { if (this.stones[i]) { this.stones[i].stock = s[0]; this.stones[i].regrow = s[1]; } });
       this.heroes = save.heroes ?? [];
       this.team = (save.team ?? []).filter((id) => this.heroes.some((h) => h.id === id));
+      this.guards = (save.guards ?? []).filter((id) => this.heroes.some((h) => h.id === id) && !this.team.includes(id));
+      if (save.raidIn != null) { this.raidAt = save.raidIn; this.raidPlan = save.raidPlan; }
       this.freeSummons = save.freeSummons ?? 0;
       this.campaign = { ...this.campaign, ...save.campaign };
     }
@@ -176,7 +183,18 @@ export class World {
 
   hero(id) { return this.heroes.find((h) => h.id === id); }
 
+  get guardHeroes() { return this.guards.map((id) => this.hero(id)).filter(Boolean); }
+  get guardCap() { return GUARD_CAP; }
+
+  toggleGuard(id) {
+    if (this.guards.includes(id)) this.guards = this.guards.filter((x) => x !== id);
+    else if (this.guards.length < GUARD_CAP) { this.guards.push(id); this.team = this.team.filter((x) => x !== id); }
+    else { this.events.toast?.(`Up to ${GUARD_CAP} guards`); return; }
+    this.events.changed?.();
+  }
+
   toggleTeam(id) {
+    if (!this.team.includes(id)) this.guards = this.guards.filter((x) => x !== id);
     if (this.team.includes(id)) this.team = this.team.filter((x) => x !== id);
     else if (this.team.length < TEAM_SIZE) this.team.push(id);
     else { this.events.toast?.('Team is full (5)'); return; }
@@ -187,7 +205,7 @@ export class World {
     const h = this.hero(id); if (!h || h.level >= MAX_LEVEL) return;
     const cost = levelCost(h);
     if (!this.canAfford(cost)) { this.events.toast?.('Not enough gold'); return; }
-    this.pay(cost); h.level++; h.xp = 0;
+    this.pay(cost); h.level++; h.xp = Math.min(h.xp, xpToLevel(h) - 1);
     this.events.changed?.();
   }
 
@@ -195,14 +213,15 @@ export class World {
   // idle gold per minute from the furthest stage cleared
   get campaignRate() { return Math.round(this.campaign.best * 1.5 * 10) / 10; }
 
-  winStage(stage, survivors) {
+  winStage(stage, fought) {
     const R = REGIONS[this.campaign.region];
     const gold = Math.round((25 + stage * 10) * this.mod('lootMul'));
     const xp = 20 + stage * 8;
     this.res.gold += gold;
-    const heroes = this.team.map((id) => this.hero(id)).filter(Boolean).map((hero) => ({ hero, levels: addXp(hero, xp) }));
+    const roster = new Set(this.heroes);
+    const heroes = (fought || []).filter((h) => roster.has(h)).map((hero) => ({ hero, levels: addXp(hero, xp) }));
     let recruits = 0, unlocked = null;
-    if (stage === this.campaign.stage) {
+    if (stage > this.campaign.best) {
       if (stage % 3 === 0) recruits = 1;
       if (stage === R.stages) { recruits = 2; unlocked = `${R.name} conquered!`; }
       this.freeSummons += recruits;
@@ -211,14 +230,79 @@ export class World {
     }
     this.events.changed?.();
     this.save();
-    return { gold, xp, heroes, recruits, unlocked, survivors };
+    return { gold, xp, heroes, recruits, unlocked };
   }
 
   dismiss(id) {
     this.heroes = this.heroes.filter((h) => h.id !== id);
     this.team = this.team.filter((x) => x !== id);
+    this.guards = this.guards.filter((x) => x !== id);
     this.res.gold += 15;
     this.events.changed?.();
+  }
+
+  // ---------------------------------------------------------------- raids
+  get defensePower() {
+    return this.guardHeroes.reduce((s, h) => s + power(h), 0) + this.buildings.filter((b) => b.type === 'tower' && b.done).length * 90;
+  }
+
+  scheduleRaid(first) {
+    this.raidPlan = planRaid(this);
+    this.raidAt = this.time + (first ? FIRST_RAID : RAID_GAP[0] + Math.random() * (RAID_GAP[1] - RAID_GAP[0])) / this.mod('raidRate');
+    this.raidWarned = false;
+  }
+
+  get raidCountdown() { return this.raidAt == null ? null : Math.max(0, this.raidAt - this.time); }
+
+  updateRaids(dt) {
+    if (this.raid) {
+      this.raid.update(dt);
+      if (this.raid.over && !this.raid.reported) {
+        this.raid.reported = true;
+        const r = this.raid;
+        const lost = Object.entries(r.stolen).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${k}`).join(', ');
+        this.events.toast?.(r.over === 'defended' ? `Raid defeated! +${r.bounty || 0} gold` : `Raiders escaped with ${lost || 'nothing'}`, 3500);
+        setTimeout(() => { this.raid = null; for (const p of this.pawns) p.unshelter?.(); this.scheduleRaid(false); this.events.changed?.(); this.save(); }, 1500);
+      }
+      return;
+    }
+    if (this.campaign.best < 1) return;               // raids start once you've won a battle
+    if (this.raidAt == null) { this.scheduleRaid(true); return; }
+    const left = this.raidAt - this.time;
+    if (!this.raidWarned && left <= RAID_WARN) {
+      this.raidWarned = true;
+      this.events.toast?.(`${this.raidPlan.tribe} sighted! Raid in ${Math.ceil(left)}s — assign guards in Heroes, build towers`, 4000);
+    }
+    if (left <= 0 && !this.raidStarting) this.startRaid();
+  }
+
+  async startRaid() {
+    this.raidStarting = true;
+    const raid = new Raid(this, this.raidPlan);
+    const ok = await raid.prepare();
+    this.raidStarting = false;
+    if (!ok) { this.scheduleRaid(false); return; }
+    this.raid = raid;
+    for (const p of this.pawns) p.shelter?.();
+    this.events.raid?.(raid);
+    this.events.changed?.();
+  }
+
+  // Resolve a raid that happened while the app was closed by comparing strengths.
+  resolveOfflineRaid() {
+    const plan = this.raidPlan || planRaid(this);
+    const def = this.defensePower, atk = raidPower(plan);
+    let result;
+    if (def >= atk) {
+      const g = plan.enemies.length * (4 + plan.level);
+      this.res.gold += g; result = { won: true, gold: g };
+    } else {
+      const share = Math.min(0.3, 0.1 + (atk - def) / atk * 0.2), lost = {};
+      for (const k of ['wood', 'gold', 'meat']) { lost[k] = Math.floor(this.res[k] * share); this.res[k] -= lost[k]; }
+      result = { won: false, lost };
+    }
+    this.scheduleRaid(false);
+    return result;
   }
 
   // ---------------------------------------------------------------- building placement
@@ -261,8 +345,6 @@ export class World {
     const b = this.addBuilding(new Building(p.type, p.x, p.y, { progress: 0, variant: p.variant, color: this.color }));
     this.fx(FX.dust, cx(b.x + b.w / 2 - 0.5), foot(b.y));
     this.placing = null;
-    this.heroes = []; this.team = []; this.freeSummons = FREE_SUMMONS;
-    this.campaign = { region: 0, stage: 1, best: 0 };
     if (this.jobs.build === 0) this.events.toast?.('Assign a Builder in Pawns to construct it');
     this.events.changed?.();
     return true;
@@ -303,11 +385,14 @@ export class World {
         const d = this.castle.door;
         const p = new Pawn(this, d.x, d.y, this.color);
         this.pawns.push(p);
+        if (this.raid && !this.raid.over) p.shelter();
         this.fx(FX.dust, p.px, p.py);
         this.events.toast?.('A new pawn joined your kingdom!');
         this.assignJobs();
       }
     }
+
+    this.updateRaids(dt);
 
     // idle gold from campaign progress
     this.campGold = (this.campGold || 0) + this.campaignRate / 60 * dt;
@@ -336,11 +421,12 @@ export class World {
       const x = e.px ?? (e.x + (e.w || 1) / 2) * T, y = e.sortY;
       return x > view.x - pad && x < view.x + view.w + pad && y > view.y - 40 && y < view.y + view.h + pad;
     };
-    const list = [...this.decor, ...this.trees, ...this.stones, ...this.buildings, ...this.sheep, ...this.pawns, ...this.effects.filter((e) => !(e instanceof FloatText))]
+    const list = [...this.decor, ...this.trees, ...this.stones, ...this.buildings, ...this.sheep, ...this.pawns.filter((p) => !p.hidden), ...(this.raid ? this.raid.drawables : []), ...this.effects.filter((e) => !(e instanceof FloatText))]
       .filter(vis);
     list.sort((a, b) => a.sortY - b.sortY);
     for (const e of list) e.draw(ctx);
     for (const b of this.buildings) b.drawOver(ctx);
+    if (this.raid) this.raid.drawOver(ctx);
     if (this.placing) this.drawGhost(ctx);
     this.drawClouds(ctx);
     for (const e of this.effects) if (e instanceof FloatText) e.draw(ctx);
@@ -398,7 +484,8 @@ export class World {
       trees: this.trees.map((t) => [t.stock, Math.round(t.regrow)]),
       stones: this.stones.map((s) => [s.stock, Math.round(s.regrow)]),
       sheep: this.sheep.length,
-      heroes: this.heroes, team: this.team, freeSummons: this.freeSummons, campaign: this.campaign,
+      heroes: this.heroes, team: this.team, guards: this.guards, freeSummons: this.freeSummons, campaign: this.campaign,
+      raidIn: this.raidAt == null ? null : Math.max(30, this.raidAt - this.time), raidPlan: this.raidPlan,
     };
   }
 
@@ -433,6 +520,17 @@ export class World {
       const used = Math.min(need, buildTime);
       b.progress = Math.min(1, b.progress + used / b.def.build); buildTime -= used;
     }
-    return { seconds: capped, gain, capped: seconds > capped, capH };
+    // raids that came while you were away (sieges will wait for you; these don't)
+    const raids = [];
+    if (this.campaign.best >= 1 && this.raidAt != null) {
+      let remaining = capped;
+      while (raids.length < 3) {
+        const left = Math.max(0, this.raidAt - this.time);
+        if (remaining < left) { this.raidAt -= remaining; break; }
+        remaining -= left;
+        raids.push(this.resolveOfflineRaid());
+      }
+    }
+    return { seconds: capped, gain, capped: seconds > capped, capH, raids };
   }
 }

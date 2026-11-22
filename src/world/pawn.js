@@ -28,6 +28,18 @@ export class Pawn {
     this.workT = 0;
   }
 
+  shelter() {
+    if (this.sheltered) return;
+    this.release(); this.sheltered = true; this.carry = null;
+    if (!this.goTo(this.world.castle.door)) this.hidden = true;
+    this.state = 'walk';
+  }
+  unshelter() {
+    if (!this.sheltered) return;
+    this.sheltered = false; this.hidden = false; this.state = 'think'; this.wait = Math.random();
+    this.world.fx(FX.dust, this.px, this.py);
+  }
+
   get tx() { return Math.floor(this.px / T); }
   get ty() { return Math.floor((this.py - 1) / T); }
 
@@ -61,6 +73,19 @@ export class Pawn {
     const workMul = speedMul * w.mod('workSpeed');
     this.anim.update(dt * (this.state === 'work' ? workMul : 1));
     const J = JOBS[this.job];
+
+    if (this.sheltered) {
+      if (this.hidden) return;
+      if (this.state === 'walk' && this.path.length) {
+        this.pose('run');
+        const next = this.path[0], tx = cx(next.x), ty = foot(next.y);
+        const dx = tx - this.px, dy = ty - this.py, d = Math.hypot(dx, dy), step = SPEED * 1.3 * dt;
+        if (Math.abs(dx) > 0.5) this.flip = dx < 0;
+        if (d <= step) { this.px = tx; this.py = ty; this.path.shift(); } else { this.px += dx / d * step; this.py += dy / d * step; }
+        return;
+      }
+      this.hidden = true; return;
+    }
 
     if (this.state === 'think') {
       this.wait -= dt;

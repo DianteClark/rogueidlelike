@@ -42,7 +42,7 @@ export const HERO_CLASSES = {
   },
   monk: {
     name: 'Monk', role: 'Support', weight: 14,
-    stats: { hp: 85, atk: 0, heal: 16, def: 2, rate: 1.6, range: 4, speed: 65 },
+    stats: { hp: 85, atk: 6, heal: 16, def: 2, rate: 1.6, range: 4, speed: 65 },
     art: (c) => {
       const p = `${FREE}Units/${c} Units/Monk/`;
       return { idle: sq(p + 'Idle.png', 192, 134), run: sq(p + 'Run.png', 192, 134),

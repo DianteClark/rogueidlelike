@@ -20,7 +20,7 @@ function weighted(items, w = (x) => x.weight) {
   return items[items.length - 1];
 }
 
-let nextId = Date.now() % 100000;
+const uid = () => (globalThis.crypto?.randomUUID ? crypto.randomUUID().slice(0, 13) : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8));
 
 export function makeHero({ cls, color, rarityId, level = 1 } = {}, kingdom = 'blue') {
   const clsId = cls || weighted(Object.entries(HERO_CLASSES), ([, d]) => d.weight)[0];
@@ -28,7 +28,7 @@ export function makeHero({ cls, color, rarityId, level = 1 } = {}, kingdom = 'bl
   const col = color || (Math.random() < 0.5 ? home : COLORS[Math.floor(Math.random() * COLORS.length)]);
   const rar = rarityId || weighted(RARITIES).id;
   const name = FIRST[Math.floor(Math.random() * FIRST.length)] + LAST[Math.floor(Math.random() * LAST.length)];
-  return { id: 'h' + (nextId++) + Math.floor(Math.random() * 1000), cls: clsId, color: col, rarity: rar, level, xp: 0, stars: 1, name, state: 'healthy' };
+  return { id: 'h-' + uid(), cls: clsId, color: col, rarity: rar, level, xp: 0, stars: 1, name, state: 'healthy' };
 }
 
 export function heroStats(h) {
@@ -50,6 +50,7 @@ export const levelCost = (h) => ({ gold: 10 + h.level * 12 });
 export const xpToLevel = (h) => 40 + h.level * 25;
 
 export function addXp(h, amount) {
+  if (h.level >= MAX_LEVEL) { h.xp = 0; return 0; }
   h.xp += amount;
   let ups = 0;
   while (h.level < MAX_LEVEL && h.xp >= xpToLevel(h)) { h.xp -= xpToLevel(h); h.level++; ups++; }

@@ -75,7 +75,7 @@ export const BUILDINGS = {
   castle:    { name: 'Castle',    file: 'Castle.png',    w: 5, h: 2, cost: null, sink: 7 },
   house:     { name: 'House',     file: 'House1.png',    w: 2, h: 1, cost: { wood: 30 }, sink: 16, pawns: 3, build: 20,
                variants: ['House1.png', 'House2.png', 'House3.png'] },
-  tower:     { name: 'Tower',     file: 'Tower.png',     w: 2, h: 1, cost: { wood: 40, gold: 20 }, sink: 24, build: 30, locked: true, defense: true },
+  tower:     { name: 'Tower',     file: 'Tower.png',     w: 2, h: 1, cost: { wood: 40, gold: 20 }, sink: 24, build: 30, defense: true },
   barracks:  { name: 'Barracks',  file: 'Barracks.png',  w: 3, h: 2, cost: { wood: 60, gold: 30 }, sink: 10, build: 40, locked: true },
   archery:   { name: 'Archery',   file: 'Archery.png',   w: 3, h: 2, cost: { wood: 60, gold: 30 }, sink: 14, build: 40, locked: true },
   monastery: { name: 'Monastery', file: 'Monastery.png', w: 3, h: 2, cost: { wood: 80, gold: 50 }, sink: 8, build: 50, locked: true },

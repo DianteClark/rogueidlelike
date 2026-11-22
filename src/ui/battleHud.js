@@ -69,7 +69,7 @@ export class BattleHud {
         <div style="text-align:center"><button class="sbtn wbtn" style="height:56px;padding:0 24px" id="bh-continue">Continue</button></div>`;
     } else {
       body.innerHTML = `<h2 style="color:#a33a2c">${b.retreated ? 'Retreat' : 'Defeat'}</h2>
-        <p>${b.retreated ? 'Your heroes fall back to the island.' : 'Your heroes were overwhelmed. Level them up or recruit more, then try again.'}</p>
+        <p>${b.retreated ? 'Your heroes fall back to the island.' : b.timedOut ? 'The fight dragged on too long and your heroes withdrew.' : 'Your heroes were overwhelmed. Level them up or recruit more, then try again.'}</p>
         <div style="text-align:center"><button class="sbtn wbtn" style="height:56px;padding:0 24px" id="bh-continue">Back to island</button></div>`;
     }
     $('bh-result').classList.remove('hidden');

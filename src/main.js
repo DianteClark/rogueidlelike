@@ -71,17 +71,23 @@ async function boot() {
   const bhud = new BattleHud(game);
   game.bhud = bhud;
   game.startBattle = async (replay) => {
+    if (game.battle || game.starting) return;
+    game.starting = true;
+    document.body.classList.add('battling');
     const w = game.world, c = w.campaign;
     const stage = replay ? Math.max(1, c.best) : c.stage;
     const b = new Battle({
       world: w, regionIdx: c.region, stage,
       onEnd: (win, battle) => {
-        const reward = win ? w.winStage(stage) : null;
+        if (battle !== game.battle) return;
+        const reward = win ? w.winStage(stage, battle.team) : null;
         bhud.result(win, reward, battle, () => { game.battle = null; bhud.hide(); hud.refresh(); w.save(); });
       },
     });
     hud.toast('Preparing for battle…', 1200);
-    if (!(await b.prepare())) { hud.toast('Add heroes to your team first'); return; }
+    let ok = false;
+    try { ok = await b.prepare(); } finally { game.starting = false; }
+    if (!ok) { document.body.classList.remove('battling'); hud.toast('Add heroes to your team first'); return; }
     game.battle = b;
     bhud.show(b);
   };
@@ -100,6 +106,7 @@ async function boot() {
       changed: () => hud.refresh(),
       gained: (k) => hud.bump(k),
       building: (b) => hud.showBuilding(b),
+      raid: (r) => { hud.toast('Raiders have landed! Pawns are running to the castle.', 3000); if (r.landing) cam.centerOn((r.landing.x + 0.5) * TILE, (r.landing.y + 0.5) * TILE); },
     }, kingdom);
     world.init(saveData, previewSeed);
     world.terrain.buildStatic();
@@ -161,6 +168,7 @@ async function boot() {
   });
   window.addEventListener('pagehide', () => game.started && game.world.save());
   setInterval(() => game.started && game.world.save(), 5000);
+  setInterval(() => game.started && hud.raidTick(), 500);
 }
 
 function colorSrcs(color) {

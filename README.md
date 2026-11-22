@@ -25,6 +25,7 @@ Add `#reset` to the end of the URL once to wipe your save (`#reset&seed=123` to 
 - Heroes: summon (3 free, then gold) with a reveal, 7 classes × 5 colors × 4 rarities, levels, a 5-hero campaign team
 - Campaign: Goblin Coast, 10 stages ending in a Troll boss. Auto-battles with hit flashes, damage numbers, projectiles, kingdom combat passives, the King's Royal Rally (with cut-in), x2 speed, retreat, replay for farming
 - Rewards: gold, hero XP and level-ups, free recruits every 3 stages; idle gold from your best stage
+- Raids (Gentle tier): after your first win, goblins land on a beach every 6–10 min with a 90s warning. Assign up to 3 Guard heroes, build Towers that shoot arrows, pawns shelter in the castle; raiders that reach the castle steal resources. Raids while you're away are resolved by defense vs raid strength
 - Pan / pinch-zoom camera, tap buildings and pawns
 - Autosave and "While you were away" offline earnings (up to 12h)
 
@@ -41,6 +42,7 @@ src/world/generate.js  seeded random island generator (map + starting layout)
 src/ui/hud.js          resource bar, panels, toasts
 src/ui/battleHud.js    battle overlay (rally, speed, retreat, results)
 src/battle/battle.js   auto-battle engine
+src/battle/raid.js     island raids (landing, marching, stealing, guards, towers)
 src/game/heroes.js     hero model: summoning, stats, levels
 src/data/units.js      hero classes, enemies, campaign regions
 src/data/art.js        every sprite path/frame size in one place

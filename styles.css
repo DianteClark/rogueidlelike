@@ -149,7 +149,7 @@ img { image-rendering: pixelated; }
 
 /* Toast */
 #toast {
-  position: absolute; left: 50%; top: calc(var(--safe-top) + 70px);
+  position: absolute; left: 50%; top: calc(var(--safe-top) + 116px);
   transform: translateX(-50%);
   max-width: 88%;
   border: 24px solid transparent;
@@ -316,3 +316,14 @@ body.battling #topbar, body.battling #bottombar, body.battling #panel { display:
 .campaign-stages div.boss { outline: 2px solid #b13a2c; }
 .foes { display: flex; gap: 2px; flex-wrap: wrap; margin: 4px 0 8px; }
 .foes img { width: 48px; height: 48px; object-fit: contain; }
+
+#raidbar {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  top: calc(var(--safe-top) + 64px);
+  font: inherit; font-size: 16px; color: #fff; text-shadow: 0 2px 0 #5a2525; white-space: nowrap;
+  height: 44px; padding: 0 6px; background: none;
+  border: 16px solid transparent; border-image: url('assets/ui/btn-red.png') 64 fill / 16px stretch;
+}
+#raidbar.hidden { display: none; }
+#raidbar.live { animation: pulse 1s ease-in-out infinite; }
+body.battling #raidbar { display: none; }

@@ -30,7 +30,7 @@ function arenaMap(seed) {
 
 const headFor = (def) => ({ 192: 74, 256: 100, 320: 118, 384: 200 }[def.fh] || 80);
 
-class Unit {
+export class Unit {
   constructor(b, side, kind, art, stats, x, y, extra = {}) {
     this.b = b; this.side = side; this.kind = kind; this.art = art;
     this.s = stats; this.hp = stats.hp; this.max = stats.hp;
@@ -43,6 +43,8 @@ class Unit {
     this.head = headFor(art.idle) * (this.scale || 1);
   }
   get alive() { return !this.dead; }
+  get sortY() { return this.y; }
+  get px() { return this.x; }
   get foes() { return this.side === 'hero' ? this.b.enemies : this.b.heroes; }
   get friends() { return this.side === 'hero' ? this.b.heroes : this.b.enemies; }
 
@@ -53,13 +55,16 @@ class Unit {
     this.cool -= dt * this.rateMul();
     if (this.regen) this.heal(this.max * this.regen * dt, true);
 
-    const healer = !!this.s.heal;
-    if (healer) {
+    let healer = false;
+    if (this.s.heal) {
       const hurt = this.friends.filter((u) => u.alive && u.hp < u.max * 0.95).sort((a, b) => a.hp / a.max - b.hp / b.max)[0];
-      this.target = hurt || this.nearest(this.friends.filter((u) => u !== this));
+      if (hurt) { this.target = hurt; healer = true; }
+      else if (!this.target || this.target.dead || this.target.side === this.side) this.target = this.nearest(this.foes);
     } else if (!this.target || this.target.dead) {
       this.target = this.nearest(this.foes);
     }
+    this.healing = healer;
+    if (this.state !== 'attack' && this.b.steer?.(this, dt)) return;
     const t = this.target;
     if (this.state === 'attack') {
       const n = frameCount(this.anim.def);
@@ -71,11 +76,7 @@ class Unit {
     if (!t) { this.anim.set(this.art.idle); return; }
     const dx = t.x - this.x, dy = t.y - this.y, d = Math.hypot(dx, dy);
     if (Math.abs(dx) > 4) this.flip = dx < 0;
-    const reach = this.s.range * T * 0.75 + 26;
-    if (healer && t.hp >= t.max * 0.95) { // nothing to heal: follow the group at a distance
-      if (d > reach * 0.8) this.move(dx / d, dy / d, dt); else this.anim.set(this.art.idle);
-      return;
-    }
+    const reach = (healer || !this.s.heal ? this.s.range : 1) * T * 0.75 + 26;
     if (d > reach) { this.move(dx / d, dy / d, dt); return; }
     if (this.cool <= 0) {
       this.state = 'attack'; this.hitDone = false; this.anim.def = null;
@@ -94,9 +95,15 @@ class Unit {
       const ox = this.x - o.x, oy = this.y - o.y, od = Math.hypot(ox, oy);
       if (od > 0 && od < 50) { vx += ox / od * 70; vy += oy / od * 70; }
     }
-    this.x += vx * dt; this.y += vy * dt;
-    this.x = Math.max(1.6 * T, Math.min((ARENA_W - 1.6) * T, this.x));
-    this.y = Math.max(2.2 * T, Math.min((ARENA_H - 1.4) * T, this.y));
+    const nx2 = this.x + vx * dt, ny2 = this.y + vy * dt;
+    if (this.b.canStand) {
+      if (this.b.canStand(nx2, ny2)) { this.x = nx2; this.y = ny2; }
+      else if (this.b.canStand(nx2, this.y)) this.x = nx2;
+      else if (this.b.canStand(this.x, ny2)) this.y = ny2;
+      return;
+    }
+    this.x = Math.max(1.6 * T, Math.min((ARENA_W - 1.6) * T, nx2));
+    this.y = Math.max(2.2 * T, Math.min((ARENA_H - 1.4) * T, ny2));
   }
 
   nearest(list) {
@@ -109,7 +116,8 @@ class Unit {
 
   strike() {
     const t = this.target; if (!t || t.dead) return;
-    if (this.s.heal) {
+    if (this.healing) {
+      if (t.side !== this.side) return;
       t.heal(this.s.heal);
       if (this.art.healFx) this.b.fx(this.art.healFx, t.x, t.y);
       return;
@@ -157,7 +165,7 @@ class Unit {
   }
 }
 
-class Projectile {
+export class Projectile {
   constructor(from, to, p) {
     this.from = from; this.to = to; this.p = p;
     this.x = from.x + (from.flip ? -20 : 20); this.y = from.y - from.head * 0.55;
@@ -206,6 +214,7 @@ export class Battle {
   async prepare() {
     const w = this.world, k = w.kingdom;
     const team = w.team.map((id) => w.hero(id)).filter(Boolean);
+    this.team = team;
     const enemyIds = stageEnemies(this.regionIdx, this.stage);
     const srcs = collectSrcs({ fx: FX, t: [TERRAIN.tilemap(this.region.terrain), TERRAIN.foam, TERRAIN.shadow], d: [NATURE.bushes, NATURE.rocks] });
     for (const h of team) { const c = HERO_CLASSES[h.cls]; collectSrcs(c.art(h.color), srcs); if (c.projectile) srcs.add(c.projectile.src); }
@@ -299,6 +308,7 @@ export class Battle {
     this.tick(dt);
     if (this.time > 0.8) {
       if (this.enemies.every((u) => u.dead)) this.finish(true);
+      else if (this.time > 150) { this.timedOut = true; this.finish(false); }
       else if (this.heroes.every((u) => u.dead)) this.finish(false);
     }
   }

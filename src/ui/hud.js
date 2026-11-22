@@ -36,7 +36,27 @@ export class Hud {
     $('#res-meat span').textContent = fmt(r.meat);
     $('#res-pawns span').textContent = `${w.pawns.length}/${w.pawnCap}`;
     $('#res-meat').style.color = w.hungry ? '#b13a2c' : '';
+    this.raidTick();
     if (this.current && this.current !== 'placing') this.render();
+  }
+
+  raidTick() {
+    const w = this.world, bar = $('#raidbar');
+    if (!w) return;
+    if (w.raid && !w.raid.over) {
+      const left = w.raid.enemies.filter((u) => !u.dead).length;
+      bar.textContent = `Raid! ${left} raider${left === 1 ? '' : 's'} — tap to look`;
+      bar.className = 'live';
+    } else if (w.raidCountdown != null && w.raidCountdown <= 90) {
+      const s = Math.ceil(w.raidCountdown);
+      bar.textContent = `${w.raidPlan?.tribe || 'Raiders'} arrive in ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+      bar.className = '';
+    } else bar.className = 'hidden';
+    bar.onclick = () => {
+      const r = w.raid; const cam = this.game.camera;
+      if (r?.landing) cam.centerOn((r.landing.x + 0.5) * 64, (r.landing.y + 0.5) * 64);
+      else this.open('heroes');
+    };
   }
 
   bump(kind) {
@@ -53,6 +73,7 @@ export class Hud {
 
   // ---------------------------------------------------------------- panels
   open(name) {
+    this.confirmDismiss = null;
     if (this.world.placing && name !== 'placing') this.world.cancelPlacing();
     this.current = name;
     const nav = name === 'hero' ? 'heroes' : name;
@@ -136,14 +157,21 @@ export class Hud {
     const teamPower = w.team.map((id) => w.hero(id)).filter(Boolean).reduce((s, h) => s + power(h), 0);
     const cards = [...w.heroes].sort((a, b) => power(b) - power(a)).map((h) => `
       <button class="hcard" style="--rc:${rarity(h.rarity).color}" data-act="hero" data-arg="${h.id}">
-        ${w.team.includes(h.id) ? '<span class="intm">Team</span>' : ''}
+        ${w.team.includes(h.id) ? '<span class="intm">Team</span>' : w.guards.includes(h.id) ? '<span class="intm" style="background:#a0662f">Guard</span>' : ''}
         <img src="${enc(avatarOf(h))}" alt="">
         <div class="lv">Lv ${h.level}</div><div class="cls">${className(h)}</div>
       </button>`).join('');
     const cost = w.summonCost;
+    const guards = Array.from({ length: w.guardCap }, (_, i) => {
+      const h = w.hero(w.guards[i]);
+      return `<div class="slot" ${h ? `data-act="hero" data-arg="${h.id}" style="border:3px solid ${rarity(h.rarity).color}"` : ''}>${h ? `<img src="${enc(avatarOf(h))}" alt="">` : ''}</div>`;
+    }).join('');
+    const nextRaid = w.raidCountdown != null ? ` · next raid in ${Math.ceil(w.raidCountdown / 60)} min` : '';
     return `<h2>Heroes ${w.heroes.length}/${w.rosterCap}</h2>
       <p>Campaign team · power ${teamPower}</p>
       <div class="teamrow">${slots}</div>
+      <p>Island guards · defense ${w.defensePower}${nextRaid}</p>
+      <div class="teamrow" style="grid-template-columns:repeat(5,1fr)">${guards}</div>
       <div class="summonbar">
         <span>${w.freeSummons > 0 ? `<b>${w.freeSummons} free</b> recruit${w.freeSummons > 1 ? 's' : ''}!` : this.costHtml(cost)}</span>
         <button class="sbtn wbtn" style="height:54px;padding:0 14px" data-act="summon" ${w.heroes.length >= w.rosterCap || (cost && !w.canAfford(cost)) ? 'disabled' : ''}>Summon</button>
@@ -164,7 +192,10 @@ export class Hud {
         <div>Defense <b>${s.def}</b></div><div>Range <b>${s.range > 1.6 ? s.range : 'Melee'}</b></div>
       </div>
       <div class="btnrow">
-        <button class="sbtn wbtn" data-act="team" data-arg="${h.id}">${inTeam ? 'Remove from team' : 'Add to team'}</button>
+        <button class="sbtn wbtn" data-act="team" data-arg="${h.id}">${inTeam ? 'Leave team' : 'Campaign team'}</button>
+        <button class="sbtn wbtn" data-act="guard" data-arg="${h.id}">${w.guards.includes(h.id) ? 'Stop guarding' : 'Guard island'}</button>
+      </div>
+      <div class="btnrow">
         <button class="sbtn wbtn" data-act="level" data-arg="${h.id}" ${h.level >= MAX_LEVEL || !w.canAfford(cost) ? 'disabled' : ''}>Level up ${this.costHtml(cost).replace(/class="cost/g, 'style="color:#fff" class="cost')}</button>
       </div>
       <div class="btnrow">
@@ -223,6 +254,7 @@ export class Hud {
     this.awayHtml = `<h2>While you were away</h2>
       <p>${h ? h + 'h ' : ''}${m}m passed${sum.capped ? ` (max ${sum.capH}h counted)` : ''}. Your pawns kept working:</p>
       <div class="row" style="justify-content:center;font-size:20px">${items}</div>
+      ${(sum.raids || []).map((r) => `<p>${r.won ? `⚔ Your guards beat off a raid (+${r.gold} gold).` : `⚔ Raiders hit the island and took ${Object.entries(r.lost).map(([k, n]) => n + ' ' + k).join(', ')}. Guards and towers help!`}</p>`).join('')}
       <div style="text-align:center;margin-top:8px"><button class="sbtn wbtn" data-act="closepanel">Collect</button></div>`;
     this.open('away');
   }
@@ -241,6 +273,7 @@ export class Hud {
     if (a === 'summon') { const h = w.summon(); if (h) this.revealHero(h); this.render(); }
     if (a === 'hero') { this.heroId = arg; this.open('hero'); }
     if (a === 'team') { w.toggleTeam(arg); this.render(); }
+    if (a === 'guard') { w.toggleGuard(arg); this.render(); }
     if (a === 'level') { w.levelUp(arg); this.render(); }
     if (a === 'back') this.open('heroes');
     if (a === 'dismiss') { if (this.confirmDismiss === arg) { w.dismiss(arg); this.confirmDismiss = null; this.open('heroes'); } else { this.confirmDismiss = arg; this.toast('Tap Dismiss again to confirm'); } }
