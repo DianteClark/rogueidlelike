@@ -6,7 +6,7 @@ import { ENEMIES, HERO_CLASSES, REGIONS, stageScale } from '../data/units.js';
 import { heroStats, heroDef } from '../game/heroes.js';
 import { teamSynergies, applyBonuses } from '../game/synergy.js';
 import { FX, TILE, FREE } from '../data/art.js';
-import { mod } from '../data/kingdoms.js';
+import { mod, KINGDOMS } from '../data/kingdoms.js';
 
 const T = TILE;
 export const RAID_TIERS = {
@@ -71,6 +71,7 @@ export class Raid {
     // guard heroes come out of the castle
     const k = w.kingdom;
     const syn = teamSynergies(w.guardHeroes, k);
+    this.ringColor = KINGDOMS[k]?.hex;
     w.guardHeroes.forEach((h, i) => {
       const c = heroDef(h.cls), st = heroStats(h);
       st.atk = Math.round(st.atk * mod(k, 'heroDamage'));

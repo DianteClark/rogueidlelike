@@ -72,6 +72,7 @@ export class World {
       this.defeated = save.defeated ?? [];
       this.campaign = { ...this.campaign, ...save.campaign };
     }
+    if (save?.castleAt && this.canPlaceAfterLoad !== false) this.relocate(this.castle, save.castleAt.x, save.castleAt.y);
     for (const b of buildings) this.addBuilding(new Building(b.type, b.x, b.y, { progress: b.progress ?? 1, variant: b.variant ?? 0, color: this.color, set: this.buildSet }));
     const sheepN = save?.sheep ?? L.sheep.length;
     for (let i = 0; i < sheepN; i++) {
@@ -81,6 +82,13 @@ export class World {
     const door = this.castle.door;
     for (let i = 0; i < pawnCount; i++) this.pawns.push(new Pawn(this, door.x + (i % 3) - 1, door.y + 1, this.color));
     this.assignJobs();
+  }
+
+  relocate(b, x, y) {
+    for (const c of b.cells()) if (this.terrain.inside(c.x, c.y) && this.terrain.occupied[c.y][c.x] === b) this.terrain.occupied[c.y][c.x] = null;
+    const ox = b.x, oy = b.y; b.x = x; b.y = y;
+    if (!this.canPlace(b.type, x, y)) { b.x = ox; b.y = oy; }
+    for (const c of b.cells()) if (this.terrain.inside(c.x, c.y)) this.terrain.occupied[c.y][c.x] = b;
   }
 
   addBuilding(b) {
@@ -363,21 +371,49 @@ export class World {
     this.placing.ok = this.placementOk();
   }
 
-  placementOk() {
-    const p = this.placing, def = BUILDINGS[p.type], tr = this.terrain;
+  placementOk() { return this.canPlace(this.placing.type, this.placing.x, this.placing.y); }
+
+  // Can a building of this type sit with its bottom-left footprint tile at (px, py)?
+  canPlace(type, px, py) {
+    const def = BUILDINGS[type], tr = this.terrain;
     let lvl = null;
     for (let i = 0; i < def.w; i++) for (let j = 0; j < def.h; j++) {
-      const x = p.x + i, y = p.y - j;
+      const x = px + i, y = py - j;
       if (!tr.walkable(x, y)) return false;
-      if (this.sheepOrPawnOn(x, y)) { /* units step aside, fine */ }
       if (lvl === null) lvl = tr.level[y][x]; else if (tr.level[y][x] !== lvl) return false;
       if (tr.stair[y][x]) return false;
     }
-    const door = { x: p.x + Math.floor(def.w / 2), y: p.y + 1 };
+    const door = { x: px + Math.floor(def.w / 2), y: py + 1 };
     return tr.walkable(door.x, door.y);
   }
 
-  sheepOrPawnOn() { return false; }
+  // ---------------------------------------------------------------- moving buildings (tap and hold)
+  pickUp(wx, wy) {
+    if (this.placing || this.moving || (this.raid && !this.raid.over)) return false;
+    const b = [...this.buildings].reverse().find((x) => x.contains(wx, wy));
+    if (!b) return false;
+    for (const c of b.cells()) if (this.terrain.inside(c.x, c.y) && this.terrain.occupied[c.y][c.x] === b) this.terrain.occupied[c.y][c.x] = null;
+    this.moving = { b, from: { x: b.x, y: b.y }, ok: true, dx: Math.floor(wx / T) - b.x, dy: Math.floor(wy / T) - b.y };
+    this.events.toast?.(`Moving ${b.name} — drag and let go`, 1600);
+    return true;
+  }
+
+  dragTo(wx, wy) {
+    const m = this.moving; if (!m) return;
+    m.b.x = Math.floor(wx / T) - m.dx; m.b.y = Math.floor(wy / T) - m.dy;
+    m.ok = this.canPlace(m.b.type, m.b.x, m.b.y);
+  }
+
+  drop() {
+    const m = this.moving; if (!m) return;
+    if (!m.ok) { m.b.x = m.from.x; m.b.y = m.from.y; this.events.toast?.("Can't place it there"); }
+    else if (m.b.x !== m.from.x || m.b.y !== m.from.y) this.fx(FX.dustBig, cx(m.b.x + m.b.w / 2 - 0.5), foot(m.b.y));
+    for (const c of m.b.cells()) if (this.terrain.inside(c.x, c.y)) this.terrain.occupied[c.y][c.x] = m.b;
+    this.moving = null;
+    // pawns re-route from where they stand
+    for (const p of this.pawns) if (p.state === 'walk' && !p.sheltered) { p.path = []; p.state = 'think'; p.wait = 0.1; p.release(); p.carry && (p.state = 'think'); }
+    this.save();
+  }
 
   confirmPlacing() {
     const p = this.placing; if (!p || !p.ok) return false;
@@ -476,6 +512,11 @@ export class World {
     for (const b of this.buildings) b.drawOver(ctx);
     if (this.raid) this.raid.drawOver(ctx);
     if (this.placing) this.drawGhost(ctx);
+    if (this.moving) {
+      const b = this.moving.b;
+      ctx.fillStyle = this.moving.ok ? 'rgba(120,255,140,.28)' : 'rgba(255,80,80,.32)';
+      for (const c of b.cells()) ctx.fillRect(c.x * T + 2, c.y * T + 2, T - 4, T - 4);
+    }
     this.drawClouds(ctx);
     for (const e of this.effects) if (e instanceof FloatText) e.draw(ctx);
 
@@ -527,7 +568,7 @@ export class World {
   // ---------------------------------------------------------------- save / offline
   serialize() {
     return {
-      v: 2, t: Date.now(), kingdom: this.kingdom, seed: this.seed,
+      v: 2, t: Date.now(), kingdom: this.kingdom, seed: this.seed, castleAt: { x: this.castle.x, y: this.castle.y },
       res: this.res, jobs: this.jobs, pawns: this.pawns.length,
       buildings: this.buildings.filter((b) => b !== this.castle).map((b) => ({ type: b.type, x: b.x, y: b.y, progress: b.progress, variant: b.variant })),
       trees: this.trees.map((t) => [t.stock, Math.round(t.regrow)]),

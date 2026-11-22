@@ -135,6 +135,9 @@ async function boot() {
     hud.refresh();
   }
 
+  cam.onHold = (x, y) => game.started && !game.battle && !game.map && game.world.pickUp(x, y);
+  cam.onHoldMove = (x, y) => game.world.dragTo(x, y);
+  cam.onHoldEnd = () => game.world.drop();
   cam.onTap = (x, y, sx, sy) => {
     if (!game.started || game.battle) return;
     if (game.map) { game.map.tap(sx, sy); return; }

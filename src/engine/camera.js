@@ -57,6 +57,15 @@ export class Camera {
       if (this.pointers.size === 1) {
         const p = pos(e);
         this.drag = { sx: p.x, sy: p.y, lx: p.x, ly: p.y, t: performance.now(), moved: false, lt: performance.now() };
+        // tap and hold: hand the gesture to whatever is under the finger (e.g. a building)
+        clearTimeout(this.holdT);
+        this.holdT = setTimeout(() => {
+          const d = this.drag;
+          if (d && !d.moved && this.pointers.size === 1 && this.onHold) {
+            const w = this.screenToWorld(d.lx, d.ly);
+            if (this.onHold(w.x, w.y)) { d.holding = true; this.vx = this.vy = 0; }
+          }
+        }, 450);
       } else {
         this.drag && (this.drag.moved = true);
         this.pinch = this.pinchState();
@@ -74,6 +83,14 @@ export class Camera {
         this.clamp();
       } else if (this.drag) {
         const p = pos(e), d = this.drag;
+        if (d.holding) {
+          const w = this.screenToWorld(p.x, p.y); this.onHoldMove?.(w.x, w.y);
+          // nudge the view when dragging near the screen edges
+          const m = 50;
+          if (p.x < m) this.x -= 6 / this.zoom; if (p.x > this.w - m) this.x += 6 / this.zoom;
+          if (p.y < m + 60) this.y -= 6 / this.zoom; if (p.y > this.h - m - 80) this.y += 6 / this.zoom;
+          this.clamp(); d.lx = p.x; d.ly = p.y; return;
+        }
         if (Math.hypot(p.x - d.sx, p.y - d.sy) > 8) d.moved = true;
         if (d.moved && !this.locked) {
           const t = performance.now(), dt = Math.max(1, t - d.lt) / 1000;
@@ -88,8 +105,10 @@ export class Camera {
       if (!this.pointers.has(e.pointerId)) return;
       this.pointers.delete(e.pointerId);
       if (this.pointers.size < 2) this.pinch = null;
+      clearTimeout(this.holdT);
       if (this.pointers.size === 0 && this.drag) {
         const d = this.drag;
+        if (d.holding) { this.onHoldEnd?.(); this.drag = null; return; }
         if (!d.moved && performance.now() - d.t < 450 && this.onTap) {
           const w = this.screenToWorld(d.sx, d.sy);
           this.onTap(w.x, w.y, d.sx, d.sy);

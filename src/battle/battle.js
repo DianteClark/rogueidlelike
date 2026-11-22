@@ -8,7 +8,7 @@ import { TILE, FX, TERRAIN, NATURE } from '../data/art.js';
 import { HERO_CLASSES, ENEMIES, REGIONS, stageEnemies, stageScale } from '../data/units.js';
 import { heroStats, heroDef } from '../game/heroes.js';
 import { teamSynergies, applyBonuses } from '../game/synergy.js';
-import { mod } from '../data/kingdoms.js';
+import { mod, KINGDOMS } from '../data/kingdoms.js';
 
 const T = TILE;
 export const ARENA_W = 10, ARENA_H = 16;
@@ -236,6 +236,7 @@ export class Battle {
     const rows = { Tank: 11.4, Melee: 12, Ranged: 13.2, Support: 13.4 };
     const dmg = mod(k, 'heroDamage');
     this.synergy = teamSynergies(team, k);
+    this.ringColor = KINGDOMS[k]?.hex;
     team.forEach((h, i) => {
       const c = heroDef(h.cls), st = heroStats(h);
       st.atk = Math.round(st.atk * dmg);
