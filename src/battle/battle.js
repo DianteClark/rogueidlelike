@@ -5,7 +5,7 @@ import { Anim, drawFrame, frameCount, img, whiteSheet, loadAll, collectSrcs } fr
 import { Terrain } from '../world/terrain.js';
 import { rng } from '../world/generate.js';
 import { TILE, FX, TERRAIN, NATURE } from '../data/art.js';
-import { HERO_CLASSES, ENEMIES, REGIONS, stageEnemies, stageScale } from '../data/units.js';
+import { HERO_CLASSES, ENEMIES, REGIONS, stageEnemies, stageScale, regionOf } from '../data/units.js';
 import { heroStats, heroDef, canFight } from '../game/heroes.js';
 import { teamSynergies, applyBonuses } from '../game/synergy.js';
 import { mod, KINGDOMS } from '../data/kingdoms.js';
@@ -220,11 +220,12 @@ class Fx {
 }
 
 export class Battle {
-  constructor({ world, regionIdx, stage, onEnd }) {
-    this.world = world; this.regionIdx = regionIdx; this.stage = stage; this.onEnd = onEnd;
-    this.region = REGIONS[regionIdx];
-    this.hill = stage % 2 === 0 && stage < REGIONS[regionIdx].stages;
-    this.terrain = new Terrain(arenaMap(stage * 977 + 13, this.hill), { color: this.region.terrain, highColor: 3 });
+  constructor({ world, stage, onEnd }) {
+    const ro = regionOf(stage);
+    this.world = world; this.regionIdx = ro.idx; this.stage = stage; this.local = ro.local; this.onEnd = onEnd;
+    this.region = ro.region;
+    this.hill = ro.local % 2 === 0 && !ro.boss;
+    this.terrain = new Terrain(arenaMap(stage * 977 + 13, this.hill), { color: this.region.terrain, highColor: this.region.terrain === 4 ? 1 : 3 });
     if (this.hill) for (let y = 0; y < ARENA_H; y++) for (let x = 0; x < ARENA_W; x++) if (this.terrain.stair[y][x] === 1) this.stairTop = { x, y };
     this.time = 0; this.speed = 1; this.rally = 0; this.rallyBuff = 0; this.over = null; this.shake = 0;
     this.heroes = []; this.enemies = []; this.projectiles = []; this.effects = []; this.texts = [];
@@ -236,7 +237,7 @@ export class Battle {
     const w = this.world, k = w.kingdom;
     const team = w.team.map((id) => w.hero(id)).filter((h) => h && canFight(h));
     this.team = team;
-    const enemyIds = stageEnemies(this.regionIdx, this.stage);
+    const enemyIds = stageEnemies(this.regionIdx, this.local);
     const srcs = collectSrcs({ fx: FX, t: [TERRAIN.tilemap(this.region.terrain), TERRAIN.foam, TERRAIN.shadow], d: [NATURE.bushes, NATURE.rocks] });
     for (const h of team) { const c = heroDef(h.cls); collectSrcs(c.art(h.color), srcs); if (c.projectile) srcs.add(c.projectile.src); }
     for (const id of enemyIds) { const e = ENEMIES[id]; collectSrcs(e.art, srcs); if (e.projectile) srcs.add(e.projectile.src); }
@@ -269,7 +270,7 @@ export class Battle {
       let y = e.boss ? 3.6 * T : (3.2 + row * 1.2) * T;
       // with a hill, ranged foes hold the high ground and melee foes wait below the cliff
       if (this.hill && !e.boss) y = (e.stats.range > 2 ? 3.4 : 6.9 + row * 0.6) * T;
-      this.enemies.push(new Unit(this, 'enemy', id, e.art, st, x, y, { projectile: e.projectile, boss: e.boss }));
+      this.enemies.push(new Unit(this, 'enemy', id, e.art, st, x, y, { projectile: e.projectile, boss: e.boss, scale: e.scale }));
     });
 
     // a few decorations around the edges

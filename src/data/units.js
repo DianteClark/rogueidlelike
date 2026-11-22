@@ -128,6 +128,43 @@ export const ENEMIES = {
       attack: [sq(E('Gnoll', 'Gnoll_Throw.png'), 192, 135)], hitFrame: 5 },
     avatar: E('Gnoll', 'Gnoll_Avatar.png'),
   },
+  gnome: {
+    name: 'Gnome', tribe: 'Forest', stats: { hp: 55, atk: 10, def: 1, rate: 0.9, range: 1, speed: 85 },
+    art: { idle: sq(E('Gnome', 'Gnome_Idle.png'), 192, 128), run: sq(E('Gnome', 'Gnome_Run.png'), 192, 128),
+      attack: [sq(E('Gnome', 'Gnome_Attack.png'), 192, 128)], hitFrame: 3 },
+    avatar: E('Gnome', 'Gnome_Avatar.png'),
+  },
+  slingshotGnome: {
+    name: 'Slingshot Gnome', tribe: 'Forest', stats: { hp: 50, atk: 11, def: 1, rate: 1.3, range: 4.5, speed: 70 },
+    projectile: { src: E('Slingshot Gnome', 'Acorn_Projectile.png'), fw: 64, fh: 64, speed: 420, spin: true },
+    art: { idle: sq(E('Slingshot Gnome', 'Slingshot Gnome_Idle.png'), 192, 137), run: sq(E('Slingshot Gnome', 'Slingshot Gnome_Run.png'), 192, 137),
+      attack: [sq(E('Slingshot Gnome', 'Slingshot Gnome_Shoot.png'), 192, 137)], hitFrame: 5 },
+    avatar: E('Slingshot Gnome', 'Slingshot Gnome_Avatar.png'),
+  },
+  snake: {
+    name: 'Snake', tribe: 'Forest', stats: { hp: 85, atk: 12, def: 2, rate: 1.1, range: 1.2, speed: 70 },
+    art: { idle: sq(E('Snake', 'Snake_Idle.png'), 192, 123), run: sq(E('Snake', 'Snake_Run.png'), 192, 123),
+      attack: [sq(E('Snake', 'Snake_Attack.png'), 192, 123)], hitFrame: 3 },
+    avatar: E('Snake', 'Snake_Avatar.png'),
+  },
+  spider: {
+    name: 'Spider', tribe: 'Forest', stats: { hp: 70, atk: 13, def: 2, rate: 0.9, range: 1, speed: 95 },
+    art: { idle: sq(E('Spider', 'Spider_Idle.png'), 192, 137), run: sq(E('Spider', 'Spider_Run.png'), 192, 137),
+      attack: [sq(E('Spider', 'Spider_Attack.png'), 192, 137)], hitFrame: 4 },
+    avatar: E('Spider', 'Spider_Avatar.png'),
+  },
+  bumblebee: {
+    name: 'Bumblebee', tribe: 'Forest', stats: { hp: 60, atk: 12, def: 1, rate: 1.0, range: 1.3, speed: 110 },
+    art: { idle: sq(E('Bumblebee', 'Bumblebee_Idle.png'), 192, 153), run: sq(E('Bumblebee', 'Bumblebee_Move.png'), 192, 153),
+      attack: [sq(E('Bumblebee', 'Bumblebee_Attack.png'), 192, 153)], hitFrame: 6 },
+    avatar: E('Bumblebee', 'Bumblebee_Avatar.png'),
+  },
+  bear: {
+    name: 'Great Bear', tribe: 'Forest', boss: true, stats: { hp: 1700, atk: 34, def: 6, rate: 2.0, range: 1.6, speed: 60 },
+    art: { idle: sq(E('Bear', 'Bear_Idle.png'), 256, 178), run: sq(E('Bear', 'Bear_Run.png'), 256, 180),
+      attack: [sq(E('Bear', 'Bear_Attack.png'), 256, 190)], hitFrame: 5, splash: 1.1 },
+    avatar: E('Bear', 'Bear_Avatar.png'), scale: 1.35,
+  },
   troll: {
     name: 'Troll', tribe: 'Brutes', boss: true, stats: { hp: 1000, atk: 26, def: 4, rate: 2.6, range: 1.8, speed: 45 },
     art: { idle: sq(E('Troll', 'Troll_Idle.png'), 384, 296), run: sq(E('Troll', 'Troll_Walk.png'), 384, 296),
@@ -157,13 +194,31 @@ export const REGIONS = [
   {
     id: 'goblins', name: 'Goblin Coast', tribe: 'Goblins', stages: 10, terrain: 2,
     pool: ['spearGoblin', 'torchGoblin', 'gnoll', 'thief', 'pigRider'],
-    boss: 'troll',
+    boss: 'troll', bossName: 'the Troll',
+  },
+  {
+    id: 'forest', name: 'Whisperwood', tribe: 'Forest', stages: 10, terrain: 4,
+    pool: ['gnome', 'snake', 'slingshotGnome', 'spider', 'bumblebee'],
+    boss: 'bear', bossName: 'the Great Bear',
   },
 ];
 
+// Campaign stages are numbered across regions: 1-10 Goblin Coast, 11-20 Whisperwood, ...
+export const TOTAL_STAGES = REGIONS.reduce((s, r) => s + r.stages, 0);
+export function regionOf(stage) {
+  let n = stage;
+  for (let i = 0; i < REGIONS.length; i++) {
+    if (n <= REGIONS[i].stages) return { idx: i, local: n, region: REGIONS[i], boss: n === REGIONS[i].stages };
+    n -= REGIONS[i].stages;
+  }
+  const last = REGIONS.length - 1;
+  return { idx: last, local: REGIONS[last].stages, region: REGIONS[last], boss: true };
+}
+export const firstStageOf = (idx) => REGIONS.slice(0, idx).reduce((s, r) => s + r.stages, 0) + 1;
+
 export function stageEnemies(regionIdx, stage) {
   const R = REGIONS[regionIdx];
-  if (stage === R.stages) return [R.boss, 'torchGoblin', 'spearGoblin'];
+  if (stage === R.stages) return [R.boss, R.pool[1], R.pool[0]];
   const count = Math.min(6, 2 + Math.floor(stage * 0.45));
   const unlocked = R.pool.slice(0, Math.min(R.pool.length, 2 + Math.floor(stage / 2)));
   const list = [];

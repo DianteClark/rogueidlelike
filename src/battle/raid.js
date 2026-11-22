@@ -2,7 +2,7 @@
 // pawns shelter in the castle. Raiders that reach the castle steal resources and sail away.
 import { Unit, Projectile } from './battle.js';
 import { Anim, loadAll, collectSrcs } from '../engine/assets.js';
-import { ENEMIES, HERO_CLASSES, REGIONS, stageScale } from '../data/units.js';
+import { ENEMIES, HERO_CLASSES, REGIONS, stageScale, regionOf, TOTAL_STAGES } from '../data/units.js';
 import { heroStats, heroDef, canFight } from '../game/heroes.js';
 import { teamSynergies, applyBonuses } from '../game/synergy.js';
 import { FX, TILE, FREE } from '../data/art.js';
@@ -18,8 +18,9 @@ export const RAID_TIERS = {
 export function planSiege(world) {
   const n = world.era.sieges;
   const pool = REGIONS[0].pool;
+  const boss = n >= 1 && REGIONS[1] && world.campaign.best > REGIONS[0].stages ? 'bear' : 'troll';
   const count = Math.min(14, 8 + n * 2);
-  const enemies = ['troll', ...Array.from({ length: count }, (_, i) => pool[(i * 3 + n) % pool.length])];
+  const enemies = [boss, ...Array.from({ length: count }, (_, i) => pool[(i * 3 + n) % pool.length])];
   if (n >= 2) enemies.push('troll');
   return { tier: 'siege', tribe: 'Goblins', enemies, level: 9 + n * 2 };
 }
@@ -27,11 +28,14 @@ export function planSiege(world) {
 // The raid the world schedules next, sized from campaign progress.
 export function planRaid(world) {
   const best = Math.max(1, world.campaign.best);
-  const pool = REGIONS[0].pool.slice(0, Math.min(5, 2 + Math.floor(best / 2)));
+  // raiders come from the tribes you've provoked: the furthest region you've fought in
+  const reg = regionOf(Math.min(best + 1, TOTAL_STAGES));
+  const R = Math.random() < 0.6 ? reg.region : REGIONS[Math.floor(Math.random() * (reg.idx + 1))];
+  const pool = R.pool.slice(0, Math.min(5, 2 + Math.floor((R === reg.region ? reg.local : 10) / 2)));
   const real = best >= 5 && Math.random() < 0.45;
   const count = Math.min(9, 2 + Math.floor(best / 2) + (real ? 2 : 0));
   const enemies = Array.from({ length: count }, (_, i) => pool[(i * 7 + best) % pool.length]);
-  return { tier: real ? 'real' : 'gentle', tribe: 'Goblins', enemies, level: Math.max(1, best - 1 + (real ? 1 : 0)) };
+  return { tier: real ? 'real' : 'gentle', tribe: R.tribe, enemies, level: Math.max(1, best - 1 + (real ? 1 : 0)) };
 }
 
 export function raidPower(plan) {
@@ -76,7 +80,7 @@ export class Raid {
       const e = ENEMIES[id], s2 = e.boss ? 1 + (this.plan.level - 9) * 0.08 : sc;
       const st = { ...e.stats, hp: Math.round(e.stats.hp * s2), atk: Math.round(e.stats.atk * s2), def: Math.round(e.stats.def * s2) };
       const u = new Unit(this, 'enemy', id, e.art, st, (this.landing.x + 0.5) * T + (i % 3 - 1) * 22, (this.landing.y + 0.85) * T + Math.floor(i / 3) * 14,
-        { projectile: e.projectile, step: 0, carry: 0 });
+        { projectile: e.projectile, step: 0, carry: 0, scale: e.scale, boss: e.boss });
       this.enemies.push(u);
       this.fx(FX.splash, u.x, u.y);
     });

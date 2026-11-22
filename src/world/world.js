@@ -7,7 +7,7 @@ import { BUILDINGS, NATURE, FX, ICONS, TILE } from '../data/art.js';
 import { img, drawFrame } from '../engine/assets.js';
 import { KINGDOMS, mod, loadMeta } from '../data/kingdoms.js';
 import { makeHero, SUMMON_COST, FREE_SUMMONS, TEAM_SIZE, BASE_ROSTER, levelCost, MAX_LEVEL, addXp, xpToLevel, injure } from '../game/heroes.js';
-import { REGIONS, HERO_CLASSES, MONSTER_HEROES, ENEMIES } from '../data/units.js';
+import { REGIONS, HERO_CLASSES, MONSTER_HEROES, ENEMIES, TOTAL_STAGES, regionOf } from '../data/units.js';
 import { Raid, planRaid, planSiege, raidPower } from '../battle/raid.js';
 import { power } from '../game/heroes.js';
 
@@ -407,7 +407,7 @@ export class World {
   get campaignRate() { return Math.round(this.campaign.best * 1.5 * 10) / 10; }
 
   winStage(stage, fought) {
-    const R = REGIONS[this.campaign.region];
+    const ro = regionOf(stage), R = ro.region;
     const gold = Math.round((25 + stage * 10) * this.mod('lootMul'));
     const xp = 20 + stage * 8;
     this.res.gold += gold;
@@ -415,11 +415,15 @@ export class World {
     const heroes = (fought || []).filter((h) => roster.has(h)).map((hero) => ({ hero, levels: addXp(hero, xp) }));
     let recruits = 0, unlocked = null;
     if (stage > this.campaign.best) {
-      if (stage % 3 === 0) recruits = 1;
-      if (stage === R.stages) { recruits = 2; unlocked = `${R.name} conquered!`; }
+      if (ro.local % 3 === 0) recruits = 1;
+      if (ro.boss) {
+        recruits = 2;
+        const next = REGIONS[ro.idx + 1];
+        unlocked = `${R.name} conquered!${next ? ` ${next.name} is now open.` : ''}`;
+      }
       this.freeSummons += recruits;
       this.campaign.best = Math.max(this.campaign.best, stage);
-      if (stage < R.stages) this.campaign.stage = stage + 1;
+      if (stage < TOTAL_STAGES) this.campaign.stage = stage + 1;
     }
     this.events.changed?.();
     this.save();

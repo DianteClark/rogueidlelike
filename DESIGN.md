@@ -228,7 +228,7 @@ Spend between runs on:
 7. ✅ Hero states (Wounded / Critical) + Monastery beds; Real Stakes raids (shelter limit, pawn losses, wrecked buildings, repairs); Fallen heroes + Hall of Heroes relics. Resource trips with escorts ✅.
 8. ✅ Sieges (Blood Moon), castle health, Castle falls → run end, Legacy earned, retire, Legacy shop (kingdom unlocks + 5 starting boosts).
 9. ✅ Endless mode, share card.
-10. Polish: sound, juice, balancing, more regions as packs grow.
+10. Second region ✅ Whisperwood (Forest tribe, Great Bear boss). Next: Shark Pirate seas, Undead isle, Brute mountains; sound; balancing.
 
 ## 13. Pixel Frog roadmap → where it plugs in
 

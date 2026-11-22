@@ -3,7 +3,7 @@ import { KINGDOMS, kingAvatar, loadMeta, saveMeta } from '../data/kingdoms.js';
 import { avatarOf, className } from '../game/heroes.js';
 import { img, load } from '../engine/assets.js';
 import { SAVE_KEY } from '../world/world.js';
-import { REGIONS } from '../data/units.js';
+import { REGIONS, TOTAL_STAGES } from '../data/units.js';
 
 const $ = (s) => document.getElementById(s);
 const enc = (s) => encodeURI(s);
@@ -41,7 +41,7 @@ export class RunScreens {
       <h2 style="text-align:center;font-size:28px;color:${s.reason === 'fallen' ? '#a33a2c' : '#3d7a2a'}">${title}</h2>
       <div class="stats">
         <div style="grid-column:1/-1">Kingdom <b>${KINGDOMS[s.kingdom].name}</b></div><div>Days <b>${s.days}</b></div>
-        <div>Best stage <b>${s.best}/${REGIONS[0].stages}</b></div><div>Sieges survived <b>${s.sieges}</b></div>
+        <div>Best stage <b>${s.best}/${TOTAL_STAGES}</b></div><div>Sieges survived <b>${s.sieges}</b></div>
         <div>Raids beaten <b>${s.raidsWon}</b></div><div>Heroes <b>${s.heroes}</b></div>
       </div>
       ${tops ? `<div class="lvups">${tops}</div>` : ''}
