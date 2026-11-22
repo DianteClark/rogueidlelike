@@ -181,7 +181,7 @@ export class Hud {
       <button class="hcard" style="--rc:${rarity(h.rarity).color}" data-act="hero" data-arg="${h.id}">
         ${w.team.includes(h.id) ? '<span class="intm">Team</span>' : w.guards.includes(h.id) ? '<span class="intm" style="background:#a0662f">Guard</span>' : w.escorting.includes(h.id) ? '<span class="intm" style="background:#2f7a8a">At sea</span>' : ''}
         <img src="${enc(avatarOf(h))}" alt="">
-        <div class="lv">Lv ${h.level}</div><div class="cls">${className(h)}</div>
+        <div class="lv">Lv ${h.level}${(h.stars || 1) > 1 ? ` <span style="color:#d9a520">${h.stars}★</span>` : ''}</div><div class="cls">${className(h)}</div>
         ${h.state === 'wounded' || h.state === 'critical' ? `<div class="hurt ${h.state}">${h.state === 'critical' ? (h.inMonastery ? 'Healing' : 'Critical') : 'Wounded'}</div>` : ''}
       </button>`).join('');
     const cost = w.summonCost;
@@ -220,7 +220,7 @@ export class Hud {
     const s = heroStats(h), r = rarity(h.rarity), inTeam = w.team.includes(h.id);
     const cost = levelCost(h);
     return `<div class="herohead"><img src="${enc(avatarOf(h))}" alt="">
-        <div><h2>${h.name}</h2><div class="rar" style="color:${r.color};text-shadow:0 1px 0 #3b2f2a">${r.name} ${groupName(h)} ${className(h)}</div>
+        <div><h2>${h.name} <span style="color:#d9a520">${'★'.repeat(h.stars || 1)}</span></h2><div class="rar" style="color:${r.color};text-shadow:0 1px 0 #3b2f2a">${r.name} ${groupName(h)} ${className(h)}</div>
         <div>Level ${h.level} · Power ${power(h)}</div><div class="muted" style="font-size:13px">XP ${h.xp}/${xpToLevel(h)}</div>
         ${stateLabel(h) ? `<div class="hurt ${h.state}" style="display:inline-block">${stateLabel(h)}</div>` : ''}</div></div>
       ${h.state === 'critical' ? `<p>${h.inMonastery ? 'Resting in the Monastery.' : 'Critical heroes can\'t fight. They heal 5× faster in a Monastery bed.'}</p>
@@ -236,6 +236,7 @@ export class Hud {
       <div class="btnrow">
         <button class="sbtn wbtn" data-act="level" data-arg="${h.id}" ${h.level >= MAX_LEVEL || !w.canAfford(cost) ? 'disabled' : ''}>Level up ${this.costHtml(cost).replace(/class="cost/g, 'style="color:#fff" class="cost')}</button>
       </div>
+      ${(h.stars || 1) < 5 ? `<div class="btnrow"><button class="sbtn wbtn" data-act="merge" data-arg="${h.id}" ${w.mergeCandidates(h).length ? '' : 'disabled'}>Merge duplicate → ${(h.stars || 1) + 1}★ (${w.mergeCandidates(h).length} available)</button></div>` : ''}
       <div class="btnrow">
         <button class="sbtn red wbtn" data-act="back">Back</button>
         <button class="sbtn red wbtn" data-act="dismiss" data-arg="${h.id}">Dismiss (+15 gold)</button>
@@ -320,6 +321,7 @@ export class Hud {
     if (a === 'team') { w.toggleTeam(arg); this.render(); }
     if (a === 'guard') { w.toggleGuard(arg); this.render(); }
     if (a === 'monastery') { w.toggleMonastery(arg); this.render(); }
+    if (a === 'merge') { w.merge(arg); this.render(); }
     if (a === 'tripkind') { this.tripSel.kind = arg; this.render(); }
     if (a === 'trippawns') { this.tripSel.pawns = Math.max(1, Math.min(6, this.tripSel.pawns + Number(arg))); this.render(); }
     if (a === 'tripescort') { const e = this.tripSel.escorts; this.tripSel.escorts = e.includes(arg) ? e.filter((x) => x !== arg) : [...e, arg].slice(0, 3); this.render(); }

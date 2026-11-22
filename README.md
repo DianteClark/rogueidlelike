@@ -41,6 +41,7 @@ Add `#reset` to the end of the URL once to wipe your save (`#reset&seed=123` to 
 - Legacy shop on the kingdom screen: unlock kingdoms (Red 150, Yellow 300, Purple 500, Black 800, Beast 1000) and buy permanent starting boosts (Settlers, Supply cache, Banner call, Stewards, Masonry)
 - Boat trips (Pawns panel): send unassigned pawns to Pine Isle, Gold Reef or Sheep Cay for a big haul. Up to 3 hero escorts make ambushes rarer; an unguarded ambush can cost pawns. Boats show at the shore when leaving and returning
 - Hills in battle: even-numbered stages have a plateau on the enemy side with one staircase. Ranged foes hold the high ground; units on high ground deal +25% damage and ranged units see farther. Melee units path to the stairs
+- Hero stars: merge a duplicate (same class, colour, rarity) into a hero for +1★ (up to 5★, +20% stats each)
 - Pan / pinch-zoom camera, tap buildings and pawns
 - Autosave and "While you were away" offline earnings (up to 12h)
 

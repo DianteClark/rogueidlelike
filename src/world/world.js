@@ -426,6 +426,24 @@ export class World {
     return { gold, xp, heroes, recruits, unlocked };
   }
 
+  // Stars: feed a duplicate (same class, colour and rarity) into a hero for +1 star (max 5).
+  mergeCandidates(h) {
+    return this.heroes.filter((x) => x !== h && x.cls === h.cls && x.color === h.color && x.rarity === h.rarity && !this.escorting.includes(x.id));
+  }
+
+  merge(id) {
+    const h = this.hero(id); if (!h || (h.stars || 1) >= 5) return;
+    const fodder = this.mergeCandidates(h).sort((a, b) => a.level - b.level)[0];
+    if (!fodder) { this.events.toast?.('Needs a duplicate: same class, colour and rarity'); return; }
+    this.heroes = this.heroes.filter((x) => x !== fodder);
+    this.team = this.team.filter((x) => x !== fodder.id);
+    this.guards = this.guards.filter((x) => x !== fodder.id);
+    h.stars = (h.stars || 1) + 1;
+    h.level = Math.max(h.level, fodder.level);
+    this.events.toast?.(`${h.name} rose to ${h.stars}★!`, 2500);
+    this.events.changed?.();
+  }
+
   dismiss(id) {
     this.heroes = this.heroes.filter((h) => h.id !== id);
     this.team = this.team.filter((x) => x !== id);
