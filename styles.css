@@ -53,7 +53,7 @@ img { image-rendering: pixelated; }
   top: calc(var(--safe-top) + 14px);
   left: calc(var(--safe-left) + 8px);
   right: calc(var(--safe-right) + 8px);
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+  display: grid; grid-template-columns: repeat(4, 1fr) 44px; gap: 6px;
   pointer-events: none;
 }
 .res {
@@ -264,7 +264,7 @@ img { image-rendering: pixelated; }
 #reveal .tapnote { position: absolute; bottom: calc(var(--safe-bottom) + 40px); opacity: .7; font-size: 15px; }
 
 /* Battle HUD */
-body.battling #topbar, body.battling #bottombar, body.battling #panel { display: none; }
+body.battling #topbar, body.battling #menubtn, body.battling #bottombar, body.battling #panel { display: none; }
 #battlehud { position: absolute; inset: 0; pointer-events: none; }
 #battlehud.hidden { display: none; }
 #battlehud > * { pointer-events: auto; }
@@ -359,3 +359,24 @@ body.mapping #topbar, body.mapping #bottombar, body.mapping #panel, body.mapping
 .ktop .sbtn { height: 50px; }
 #kdetail .perk small { font-size: 13px; opacity: .8; }
 #kdetail .perk .sbtn { height: 46px; min-width: 74px; flex: none; }
+
+#menubtn {
+  pointer-events: auto; height: 44px; width: 44px; padding: 9px 8px; align-self: center;
+  border: 14px solid transparent; border-image: url('assets/ui/btn-blue.png') 64 fill / 14px stretch; background: none;
+  display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;
+}
+#menubtn { padding: 0; border-width: 12px; }
+#menubtn span { display: block; height: 3px; background: #fff; border-radius: 2px; box-shadow: 0 1px 0 #1d3f52; }
+#menubtn:active { border-image-source: url('assets/ui/btn-blue-pressed.png'); }
+#menu {
+  position: fixed; top: 0; left: 0; width: 100vw; height: var(--app-h, 100dvh); z-index: 9;
+  background: rgba(12,24,32,.72); display: flex; align-items: center; padding: 0 10px;
+}
+#menu.hidden { display: none; }
+#menu .paper { max-height: 88%; }
+#menu .bigbtn { width: 100%; margin-top: 8px; height: 64px; font-size: 20px; }
+#menu .bigbtn.red { border-image-source: url('assets/ui/btn-red.png'); text-shadow: 0 2px 0 #5a2525; }
+#menu .bigbtn.red:active { border-image-source: url('assets/ui/btn-red-pressed.png'); }
+#menu .perk { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin: 6px 0; font-size: 15px; }
+#menu .perk small { font-size: 13px; opacity: .8; }
+#menu .perk .sbtn { height: 46px; min-width: 74px; flex: none; }

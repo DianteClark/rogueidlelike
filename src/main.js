@@ -10,6 +10,7 @@ import { REGIONS, TOTAL_STAGES, regionOf } from './data/units.js';
 import { BattleHud } from './ui/battleHud.js';
 import { MapScreen } from './ui/mapScreen.js';
 import { RunScreens } from './ui/runScreens.js';
+import { Menu } from './ui/menu.js';
 import { Hud } from './ui/hud.js';
 import { pawnArt, TERRAIN, NATURE, FX, BUILDINGS, buildingArt, ICONS, TILE } from './data/art.js';
 
@@ -73,6 +74,7 @@ async function boot() {
   game.hud = hud;
   const runs = new RunScreens(game);
   game.runs = runs;
+  game.menu = new Menu(game);
   const bhud = new BattleHud(game);
   game.bhud = bhud;
   game.mapScreen = new MapScreen(game);
