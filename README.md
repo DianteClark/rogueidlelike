@@ -13,7 +13,7 @@ See **[DESIGN.md](DESIGN.md)** for the full game design and build order.
 2. Tap **Share → Add to Home Screen**.
 3. Launch it from the home screen: fullscreen, works offline, saves on the device.
 
-Add `#reset` to the end of the URL once to wipe your save (`#reset&seed=123` to try a specific island).
+Add `#reset` to the end of the URL once to wipe your save (`#reset&seed=123` to try a specific island). Add `#unlockall` once to unlock every kingdom for testing.
 
 ## What's in this build
 - Kingdom select: pick one of six kingdoms (five colours + the Beast Horde, each with a combat passive, an island passive and a drawback (four unlock with Legacy)
@@ -31,7 +31,6 @@ Add `#reset` to the end of the URL once to wipe your save (`#reset&seed=123` to 
 - Team bonuses: 2/3/4/5 heroes of one colour (or one monster tribe) unlock tiered bonuses; heroes matching your kingdom colour get +10% health and attack
 - Monster heroes: every monster you beat can join your summons (Rare or better); bosses are Legendary, sometimes Mythic
 - Beast Horde: a monster kingdom with a Hollow Tree instead of a castle, Gnome Huts, Mushroom Towers, Goblin Huts, a Lookout and a Shaman Cave; the Troll is its King; starts with goblin heroes, humans join after stage 5, beaten raiders may join
-- All kingdoms are unlocked for testing until runs and Legacy exist (`UNLOCK_ALL_FOR_TESTING` in src/data/kingdoms.js)
 - Units in battle stand on a coloured ring: yours vs the enemy's
 - Tap and hold any building (castle included) to pick it up, drag it (green = fits, red = blocked) and let go
 - Injuries: heroes who fall get Wounded (weaker, heal on their own); fall again and they're Critical (can't fight). The Monastery (now buildable) has beds that heal Critical heroes 5× faster
@@ -39,6 +38,7 @@ Add `#reset` to the end of the URL once to wipe your save (`#reset&seed=123` to 
 - Blood Moon sieges: 10 minutes after you conquer the Goblin Coast, a huge horde led by the Troll attacks the castle itself (castle health shown in the red bar). Every healthy hero defends. Sieges never play out while the app is closed: the horde waits at the shore and gives you a minute. If the castle falls, the run ends
 - Winning the first siege wins the Era: end the run and collect Legacy, or continue into Endless where sieges keep coming, stronger each time
 - Run summary with Legacy earned and a Share button (builds an image card and opens the iPhone share sheet). Retire any time from the castle
+- Legacy shop on the kingdom screen: unlock kingdoms (Red 150, Yellow 300, Purple 500, Black 800, Beast 1000) and buy permanent starting boosts (Settlers, Supply cache, Banner call, Stewards, Masonry)
 - Pan / pinch-zoom camera, tap buildings and pawns
 - Autosave and "While you were away" offline earnings (up to 12h)
 

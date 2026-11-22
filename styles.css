@@ -354,3 +354,8 @@ body.mapping #topbar, body.mapping #bottombar, body.mapping #panel, body.mapping
 #runover.hidden { display: none; }
 #runover .paper { max-height: 90%; }
 #runover .lvups div { width: 84px; }
+
+.ktop { position: absolute; top: calc(var(--safe-top) + 90px); left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: center; color: #fff; text-shadow: 0 2px 0 #1d3f52; font-size: 20px; }
+.ktop .sbtn { height: 50px; }
+#kdetail .perk small { font-size: 13px; opacity: .8; }
+#kdetail .perk .sbtn { height: 46px; min-width: 74px; flex: none; }

@@ -5,7 +5,7 @@ import { Tree, GoldStone, Building, Sheep, Fx, FloatText, Decor, Duck, cx, foot 
 import { Pawn, JOBS } from './pawn.js';
 import { BUILDINGS, NATURE, FX, ICONS, TILE } from '../data/art.js';
 import { img } from '../engine/assets.js';
-import { KINGDOMS, mod } from '../data/kingdoms.js';
+import { KINGDOMS, mod, loadMeta } from '../data/kingdoms.js';
 import { makeHero, SUMMON_COST, FREE_SUMMONS, TEAM_SIZE, BASE_ROSTER, levelCost, MAX_LEVEL, addXp, xpToLevel, injure } from '../game/heroes.js';
 import { REGIONS, HERO_CLASSES, MONSTER_HEROES, ENEMIES } from '../data/units.js';
 import { Raid, planRaid, planSiege, raidPower } from '../battle/raid.js';
@@ -59,6 +59,13 @@ export class World {
     this.duck = new Duck(this);
 
     let pawnCount = 3, buildings = L.buildings;
+    const boosts = save ? (save.boosts || {}) : { ...loadMeta().boosts };
+    this.boosts = boosts;
+    if (!save) {
+      pawnCount += boosts.pawns || 0;
+      for (const k of ['wood', 'gold', 'meat']) this.res[k] += (boosts.supplies || 0) * 40;
+      this.freeSummons += boosts.recruits || 0;
+    }
     if (save) {
       this.res = { ...this.res, ...save.res };
       this.jobs = { ...this.jobs, ...save.jobs };
@@ -377,7 +384,7 @@ export class World {
   }
 
   // ---------------------------------------------------------------- sieges & the run
-  get castleMax() { return 1500 + this.buildings.filter((b) => b.type === 'tower' && b.working).length * 150; }
+  get castleMax() { return Math.round(1500 * (1 + (this.boosts?.walls || 0) * 0.15)) + this.buildings.filter((b) => b.type === 'tower' && b.working).length * 150; }
 
   hitCastle(dmg) {
     if (this.castleHp == null) this.castleHp = this.castleMax;
@@ -728,7 +735,7 @@ export class World {
       v: 2, t: Date.now(), kingdom: this.kingdom, seed: this.seed, castleAt: { x: this.castle.x, y: this.castle.y },
       res: this.res, jobs: this.jobs, pawns: this.pawns.length,
       buildings: this.buildings.filter((b) => b !== this.castle).map((b) => ({ type: b.type, x: b.x, y: b.y, progress: b.progress, variant: b.variant, wrecked: !!b.wrecked })),
-      hall: this.hall, era: this.era, runOver: this.runOver || null, legacyBanked: !!this.legacyBanked, siegeIn: this.siegeAt == null ? null : Math.max(20, this.siegeAt - this.time),
+      hall: this.hall, era: this.era, boosts: this.boosts, runOver: this.runOver || null, legacyBanked: !!this.legacyBanked, siegeIn: this.siegeAt == null ? null : Math.max(20, this.siegeAt - this.time),
       trees: this.trees.map((t) => [t.stock, Math.round(t.regrow)]),
       stones: this.stones.map((s) => [s.stock, Math.round(s.regrow)]),
       sheep: this.sheep.length,
@@ -747,7 +754,7 @@ export class World {
 
   // Apply income for the time the app was closed. Returns a summary or null.
   applyOffline(seconds) {
-    const capH = this.mod('idleCapH', OFFLINE_CAP_H);
+    const capH = this.mod('idleCapH', OFFLINE_CAP_H) + (this.boosts?.idle || 0) * 2;
     const capped = Math.min(seconds, capH * 3600);
     if (capped < 60) return null;
     const min = capped / 60;

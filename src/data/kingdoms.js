@@ -52,8 +52,17 @@ export const KINGDOMS = {
 
 export const KINGDOM_ORDER = ['blue', 'red', 'yellow', 'purple', 'black', 'beast'];
 
-// Until runs and Legacy exist, every kingdom is open so they can all be tried.
-export const UNLOCK_ALL_FOR_TESTING = true;
+// Add #unlockall to the URL once to open every kingdom for testing.
+export const UNLOCK_ALL_FOR_TESTING = typeof location !== 'undefined' && location.hash.includes('unlockall');
+
+// Permanent starting boosts bought with Legacy between runs. cost(level) = Legacy for the next level.
+export const BOOSTS = {
+  pawns:    { name: 'Settlers', text: (n) => `Start with +${n} pawn${n === 1 ? '' : 's'}`, max: 3, cost: (l) => 80 + l * 80 },
+  supplies: { name: 'Supply cache', text: (n) => `Start with +${n * 40} wood, gold and meat`, max: 3, cost: (l) => 60 + l * 60 },
+  recruits: { name: 'Banner call', text: (n) => `+${n} free recruit${n === 1 ? '' : 's'} at the start`, max: 3, cost: (l) => 100 + l * 100 },
+  idle:     { name: 'Stewards', text: (n) => `Idle earnings last +${n * 2}h`, max: 3, cost: (l) => 90 + l * 90 },
+  walls:    { name: 'Masonry', text: (n) => `Castle health +${n * 15}%`, max: 3, cost: (l) => 120 + l * 120 },
+};
 
 export function kingAvatar(k) {
   const K = KINGDOMS[k] || KINGDOMS.blue;
@@ -69,7 +78,8 @@ export function loadMeta() {
   let m;
   try { m = { legacy: 0, unlocked: ['blue'], ...JSON.parse(localStorage.getItem(META_KEY)) }; }
   catch { m = { legacy: 0, unlocked: ['blue'] }; }
-  if (UNLOCK_ALL_FOR_TESTING) m.unlocked = [...KINGDOM_ORDER];
+  m.boosts = { ...(m.boosts || {}) };
+  if (UNLOCK_ALL_FOR_TESTING) { m.unlocked = [...KINGDOM_ORDER]; saveMeta(m); }
   return m;
 }
 export function saveMeta(meta) {
