@@ -6,7 +6,9 @@ import { newSeed } from './world/generate.js';
 import { KINGDOMS, loadMeta } from './data/kingdoms.js';
 import { chooseKingdom } from './ui/kingdomSelect.js';
 import { Battle, ARENA_W, ARENA_H } from './battle/battle.js';
+import { REGIONS } from './data/units.js';
 import { BattleHud } from './ui/battleHud.js';
+import { MapScreen } from './ui/mapScreen.js';
 import { Hud } from './ui/hud.js';
 import { pawnArt, TERRAIN, NATURE, FX, BUILDINGS, buildingSrc, ICONS, TILE } from './data/art.js';
 
@@ -70,18 +72,27 @@ async function boot() {
   game.hud = hud;
   const bhud = new BattleHud(game);
   game.bhud = bhud;
-  game.startBattle = async (replay) => {
+  game.mapScreen = new MapScreen(game);
+  game.openMap = () => game.mapScreen.open();
+  game.startBattle = async (stageArg) => {
     if (game.battle || game.starting) return;
     game.starting = true;
     document.body.classList.add('battling');
     const w = game.world, c = w.campaign;
-    const stage = replay ? Math.max(1, c.best) : c.stage;
+    const stage = typeof stageArg === 'number' ? Math.min(stageArg, c.stage) : c.stage;
     const b = new Battle({
       world: w, regionIdx: c.region, stage,
       onEnd: (win, battle) => {
         if (battle !== game.battle) return;
         const reward = win ? w.winStage(stage, battle.team) : null;
-        bhud.result(win, reward, battle, () => { game.battle = null; bhud.hide(); hud.refresh(); w.save(); });
+        const leave = () => { game.battle = null; bhud.hide(); hud.refresh(); w.save(); };
+        const R = REGIONS[c.region];
+        bhud.result(win, reward, battle, {
+          island: leave,
+          map: () => { leave(); game.openMap(); },
+          next: win && stage < R.stages ? () => { leave(); game.startBattle(stage + 1); } : null,
+          retry: !win ? () => { leave(); game.startBattle(stage); } : null,
+        });
       },
     });
     hud.toast('Preparing for battle…', 1200);
@@ -123,8 +134,9 @@ async function boot() {
     hud.refresh();
   }
 
-  cam.onTap = (x, y) => {
-    if (!game.started) return;
+  cam.onTap = (x, y, sx, sy) => {
+    if (!game.started || game.battle) return;
+    if (game.map) { game.map.tap(sx, sy); return; }
     game.world.tap(x, y);
     if (game.world.placing) hud.render();
   };
@@ -189,6 +201,7 @@ function startLoop() {
       game.camera.update(dt);
       game.world.update(dt);
       if (game.battle) { game.battle.update(dt); game.bhud.update(game.battle); renderBattle(); }
+      else if (game.map) { game.map.update(dt); game.map.draw(ctx, canvas.clientWidth, canvas.clientHeight, game.dpr, game.safeTop); }
       else render();
     }
     requestAnimationFrame(frame);

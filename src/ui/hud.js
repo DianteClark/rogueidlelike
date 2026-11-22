@@ -16,6 +16,7 @@ export class Hud {
     $('#panel-close').addEventListener('click', () => this.close());
     document.querySelectorAll('.navbtn').forEach((b) => b.addEventListener('click', () => {
       const name = b.dataset.panel;
+      if (name === 'campaign') { this.close(); this.game.openMap(); return; }
       if (this.current === name) this.close(); else this.open(name);
     }));
     this.body.addEventListener('click', (e) => {

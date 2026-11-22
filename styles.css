@@ -327,3 +327,14 @@ body.battling #topbar, body.battling #bottombar, body.battling #panel { display:
 #raidbar.hidden { display: none; }
 #raidbar.live { animation: pulse 1s ease-in-out infinite; }
 body.battling #raidbar { display: none; }
+
+/* Campaign map */
+body.mapping #topbar, body.mapping #bottombar, body.mapping #panel, body.mapping #raidbar { display: none; }
+#mapui { position: absolute; inset: 0; pointer-events: none; }
+#mapui.hidden { display: none; }
+#mapui > * { pointer-events: auto; }
+#mapui .kbanner { pointer-events: none; }
+.mapsheet { position: absolute; left: 8px; right: 8px; bottom: calc(var(--safe-bottom) + 6px); }
+.mapsheet h2 { margin: 0 0 4px; font-size: 22px; }
+.mapsheet p { margin: 2px 0 8px; font-size: 15px; }
+#map-close { position: absolute; top: calc(var(--safe-top) + 14px); left: 8px; height: 48px; }

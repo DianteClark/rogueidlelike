@@ -27,6 +27,7 @@ Add `#reset` to the end of the URL once to wipe your save (`#reset&seed=123` to 
 - Rewards: gold, hero XP and level-ups, free recruits every 3 stages; idle gold from your best stage
 - Raids (Gentle tier): after your first win, goblins land on a beach every 6–10 min with a 90s warning. Assign up to 3 Guard heroes, build Towers that shoot arrows, pawns shelter in the castle; raiders that reach the castle steal resources. Raids while you're away are resolved by defense vs raid strength
 - The rubber duck: tap it when it drifts by for treasure; a rare golden duck gives gold and a free recruit
+- Campaign map: a sea chart of stage islands; after each fight choose Next stage, Map or Island (Retry after a loss)
 - Pan / pinch-zoom camera, tap buildings and pawns
 - Autosave and "While you were away" offline earnings (up to 12h)
 
@@ -42,6 +43,7 @@ src/world/entities.js  trees, gold, sheep, buildings, effects
 src/world/generate.js  seeded random island generator (map + starting layout)
 src/ui/hud.js          resource bar, panels, toasts
 src/ui/battleHud.js    battle overlay (rally, speed, retreat, results)
+src/ui/mapScreen.js    campaign sea chart
 src/battle/battle.js   auto-battle engine
 src/battle/raid.js     island raids (landing, marching, stealing, guards, towers)
 src/game/heroes.js     hero model: summoning, stats, levels

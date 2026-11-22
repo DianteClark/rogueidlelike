@@ -65,7 +65,7 @@ export class Camera {
     c.addEventListener('pointermove', (e) => {
       if (!this.pointers.has(e.pointerId)) return;
       this.pointers.set(e.pointerId, pos(e));
-      if (this.pointers.size >= 2 && this.pinch) {
+      if (this.pointers.size >= 2 && this.pinch && !this.locked) {
         const now = this.pinchState();
         this.zoomAt(now.cx, now.cy, this.pinch.zoom * now.dist / this.pinch.dist);
         this.x -= (now.cx - this.pinch.cx) / this.zoom;
@@ -75,7 +75,7 @@ export class Camera {
       } else if (this.drag) {
         const p = pos(e), d = this.drag;
         if (Math.hypot(p.x - d.sx, p.y - d.sy) > 8) d.moved = true;
-        if (d.moved) {
+        if (d.moved && !this.locked) {
           const t = performance.now(), dt = Math.max(1, t - d.lt) / 1000;
           this.x -= (p.x - d.lx) / this.zoom; this.y -= (p.y - d.ly) / this.zoom;
           this.vx = (p.x - d.lx) / dt; this.vy = (p.y - d.ly) / dt;
@@ -92,7 +92,7 @@ export class Camera {
         const d = this.drag;
         if (!d.moved && performance.now() - d.t < 450 && this.onTap) {
           const w = this.screenToWorld(d.sx, d.sy);
-          this.onTap(w.x, w.y);
+          this.onTap(w.x, w.y, d.sx, d.sy);
         }
         if (performance.now() - d.lt > 80) { this.vx = this.vy = 0; }
         this.drag = null;
