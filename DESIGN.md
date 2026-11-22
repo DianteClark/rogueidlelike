@@ -49,6 +49,8 @@ pick is a strategy, not just a color.
 | Black — Fallen Crown | Lifesteal | Fallen heroes leave relics 2× as strong | Raids come 30% more often | 800 Legacy |
 | Beast Horde (monsters) | Heroes move and attack 12% faster | Starts with monster heroes; beaten raiders may join | Humans only join after stage 5 | 1000 Legacy |
 
+**Hall of Heroes relics** ease each kingdom's own drawback (per fallen hero, capped): Blue +1% hero attack (max 15%), Red −2% wood costs (max 20%), Yellow −3% food eaten (max 25%), Purple +2% work speed (max 15%), Black raids 3% less often (max 25%, relics count double), Beast humans join 1 stage earlier (max 4).
+
 The Beast Horde builds with Enemy Pack structures: Hollow Tree (main hall), Gnome Hut (house), Mushroom Tower, Goblin Hut (barracks), Lookout (archery), Shaman Cave (monastery). Its King is the Troll.
 
 Kingdoms are defined in `src/data/kingdoms.js`. Island passives and drawbacks that touch existing systems

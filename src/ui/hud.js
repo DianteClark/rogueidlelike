@@ -201,7 +201,7 @@ export class Hud {
         <button class="sbtn wbtn" style="height:54px;padding:0 14px" data-act="summon" ${w.heroes.length >= w.rosterCap || (cost && !w.canAfford(cost)) ? 'disabled' : ''}>Summon</button>
       </div>
       <div class="herogrid">${cards || '<p class="muted">No heroes yet. Summon your first!</p>'}</div>
-      ${w.hall.length ? `<h2 style="margin-top:12px">Hall of Heroes</h2><p class="muted">Relics of the fallen: +${Math.round(w.relicBonus * 100)}% attack for all heroes</p>
+      ${w.hall.length ? `<h2 style="margin-top:12px">Hall of Heroes</h2><p class="muted">Relics of the fallen: ${w.relic ? w.relic.text(w.relic.value) : ''}${w.relic && w.relic.value >= w.relic.cap ? ' (max)' : ''}</p>
         <div class="chips">${w.hall.map((f) => `<span class="chip">${f.name} · Lv ${f.level}</span>`).join('')}</div>` : ''}`;
   }
 

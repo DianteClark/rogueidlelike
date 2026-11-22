@@ -52,6 +52,18 @@ export const KINGDOMS = {
 
 export const KINGDOM_ORDER = ['blue', 'red', 'yellow', 'purple', 'black', 'beast'];
 
+// Hall of Heroes: each fallen hero leaves a relic that eases that kingdom's own drawback.
+// per = effect per relic, cap = most it can reach. Black's relics count double (its island passive).
+export const RELICS = {
+  blue:   { key: 'attack',   per: 0.01, cap: 0.15, text: (v) => `+${pct(v)} hero attack` },
+  red:    { key: 'woodCost', per: 0.02, cap: 0.20, text: (v) => `-${pct(v)} wood costs` },
+  yellow: { key: 'eat',      per: 0.03, cap: 0.25, text: (v) => `-${pct(v)} food eaten` },
+  purple: { key: 'workSpeed', per: 0.02, cap: 0.15, text: (v) => `+${pct(v)} pawn work speed` },
+  black:  { key: 'raidRate', per: 0.03, cap: 0.25, text: (v) => `raids ${pct(v)} less often` },
+  beast:  { key: 'humansAfter', per: 1, cap: 4, text: (v) => `humans join ${v} stage${v === 1 ? '' : 's'} earlier` },
+};
+const pct = (v) => Math.round(v * 100) + '%';
+
 // Add #unlockall to the URL once to open every kingdom for testing.
 export const UNLOCK_ALL_FOR_TESTING = typeof location !== 'undefined' && location.hash.includes('unlockall');
 

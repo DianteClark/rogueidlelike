@@ -1,5 +1,5 @@
 // Start-of-run screen: pick a kingdom. Locked ones can be inspected; they unlock with Legacy.
-import { KINGDOMS, KINGDOM_ORDER, kingAvatar, BOOSTS, saveMeta } from '../data/kingdoms.js';
+import { KINGDOMS, KINGDOM_ORDER, kingAvatar, BOOSTS, saveMeta, RELICS } from '../data/kingdoms.js';
 import { WAR, FREE } from '../data/art.js';
 
 const enc = (s) => encodeURI(s);
@@ -57,6 +57,7 @@ export function chooseKingdom(meta, onPreview) {
       <div class="perk"><img src="${ICON('05')}" alt="">${k.combat}</div>
       <div class="perk"><img src="${ICON('01')}" alt="">${k.island}</div>
       <div class="perk bad"><img src="${ICON('09')}" alt="">${k.drawback}</div>
+      <div class="tag">Fallen heroes' relics: ${RELICS[id].text(RELICS[id].per)} each, up to ${Math.round(RELICS[id].cap * (RELICS[id].per < 1 ? 100 : 1))}${RELICS[id].per < 1 ? '%' : ''}</div>
       ${locked ? `<button class="sbtn wbtn" style="width:100%;height:52px;margin-top:6px" data-unlock="${id}" ${(meta.legacy || 0) < k.unlock ? 'disabled' : ''}>Unlock for ${k.unlock} Legacy</button>` : ''}`;
     start.disabled = locked;
     start.textContent = locked ? `Locked (${k.unlock} Legacy)` : 'Found Kingdom';

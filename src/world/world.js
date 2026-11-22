@@ -5,7 +5,7 @@ import { Tree, GoldStone, Building, Sheep, Fx, FloatText, Decor, Duck, cx, foot 
 import { Pawn, JOBS } from './pawn.js';
 import { BUILDINGS, NATURE, FX, ICONS, TILE } from '../data/art.js';
 import { img, drawFrame } from '../engine/assets.js';
-import { KINGDOMS, mod, loadMeta } from '../data/kingdoms.js';
+import { KINGDOMS, mod, loadMeta, RELICS } from '../data/kingdoms.js';
 import { makeHero, SUMMON_COST, FREE_SUMMONS, TEAM_SIZE, BASE_ROSTER, levelCost, MAX_LEVEL, addXp, xpToLevel, injure } from '../game/heroes.js';
 import { REGIONS, HERO_CLASSES, MONSTER_HEROES, ENEMIES, TOTAL_STAGES, regionOf } from '../data/units.js';
 import { Raid, planRaid, planSiege, raidPower } from '../battle/raid.js';
@@ -203,7 +203,23 @@ export class World {
     this.events.changed?.();
   }
 
-  mod(key, fallback = 1) { return mod(this.kingdom, key, fallback); }
+  mod(key, fallback = 1) {
+    let v = mod(this.kingdom, key, fallback);
+    const r = this.relic;
+    if (r && r.key === key && r.value) {
+      if (key === 'woodCost' || key === 'eat') v *= 1 - r.value;
+      else if (key === 'workSpeed') v *= 1 + r.value;
+      else if (key === 'raidRate') v *= 1 - r.value;
+    }
+    return v;
+  }
+
+  // the Hall of Heroes relic effect for this kingdom
+  get relic() {
+    const R = RELICS[this.kingdom]; if (!R || !this.hall?.length) return R ? { ...R, value: 0 } : null;
+    const n = this.hall.length * mod(this.kingdom, 'relicMul', 1);
+    return { ...R, value: Math.min(R.cap, n * R.per) };
+  }
 
   // building cost after kingdom modifiers
   costOf(type) {
@@ -322,7 +338,7 @@ export class World {
   }
 
   // each fallen hero's relic: +1% attack for every hero (max 15%, doubled for the Fallen Crown)
-  get relicBonus() { return Math.min(0.15, this.hall.length * 0.01) * this.mod('relicMul'); }
+  get relicBonus() { const r = this.relic; return r?.key === 'attack' ? r.value : 0; }
 
   wreck(b) {
     if (!b || b === this.castle || b.wrecked || !b.done) return false;
@@ -381,7 +397,8 @@ export class World {
   get summonPool() {
     const k = KINGDOMS[this.kingdom];
     const monsters = [...new Set([...(k.monsterPool || []), ...this.defeated])].filter((id) => MONSTER_HEROES[id]);
-    const humans = k.humansAfter == null || this.campaign.best >= k.humansAfter ? Object.keys(HERO_CLASSES) : [];
+    const after = k.humansAfter == null ? null : Math.max(1, k.humansAfter - (this.relic?.key === 'humansAfter' ? this.relic.value : 0));
+    const humans = after == null || this.campaign.best >= after ? Object.keys(HERO_CLASSES) : [];
     return [...humans, ...monsters];
   }
 
