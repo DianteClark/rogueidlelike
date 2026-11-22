@@ -6,6 +6,7 @@ import { Pawn, JOBS } from './pawn.js';
 import { BUILDINGS, NATURE, FX, ICONS, TILE } from '../data/art.js';
 import { img } from '../engine/assets.js';
 import { KINGDOMS, mod } from '../data/kingdoms.js';
+import { makeHero, SUMMON_COST, FREE_SUMMONS, TEAM_SIZE, BASE_ROSTER, levelCost, MAX_LEVEL } from '../game/heroes.js';
 
 const T = TILE;
 export const SAVE_KEY = 'tinycrowns.save.v2';
@@ -28,6 +29,8 @@ export class World {
     this.decor = []; this.effects = [];
     this.time = 0; this.hungry = false; this.eatT = 0; this.arriveT = 0; this.sheepT = 0;
     this.placing = null;
+    this.heroes = []; this.team = []; this.freeSummons = FREE_SUMMONS;
+    this.campaign = { region: 0, stage: 1, best: 0 };
     this.clouds = Array.from({ length: 3 }, (_, i) => ({ i: (i * 3) % 8, x: Math.random() * 2000 - 600, y: Math.random() * 1600, s: 7 + Math.random() * 6 }));
   }
 
@@ -54,6 +57,10 @@ export class World {
       buildings = save.buildings ?? buildings;
       save.trees?.forEach((s, i) => { if (this.trees[i]) { this.trees[i].stock = s[0]; this.trees[i].regrow = s[1]; } });
       save.stones?.forEach((s, i) => { if (this.stones[i]) { this.stones[i].stock = s[0]; this.stones[i].regrow = s[1]; } });
+      this.heroes = save.heroes ?? [];
+      this.team = (save.team ?? []).filter((id) => this.heroes.some((h) => h.id === id));
+      this.freeSummons = save.freeSummons ?? 0;
+      this.campaign = { ...this.campaign, ...save.campaign };
     }
     for (const b of buildings) this.addBuilding(new Building(b.type, b.x, b.y, { progress: b.progress ?? 1, variant: b.variant ?? 0, color: this.color }));
     const sheepN = save?.sheep ?? L.sheep.length;
@@ -150,6 +157,46 @@ export class World {
     this.events.changed?.();
   }
 
+  // ---------------------------------------------------------------- heroes
+  get rosterCap() { return BASE_ROSTER; }
+  get summonCost() { return this.freeSummons > 0 ? null : { gold: SUMMON_COST }; }
+
+  summon() {
+    if (this.heroes.length >= this.rosterCap) { this.events.toast?.('Roster full'); return null; }
+    if (this.freeSummons > 0) this.freeSummons--;
+    else if (this.canAfford(this.summonCost)) this.pay(this.summonCost);
+    else { this.events.toast?.('Not enough gold'); return null; }
+    const h = makeHero({}, this.kingdom);
+    this.heroes.push(h);
+    if (this.team.length < TEAM_SIZE) this.team.push(h.id);
+    this.events.changed?.();
+    return h;
+  }
+
+  hero(id) { return this.heroes.find((h) => h.id === id); }
+
+  toggleTeam(id) {
+    if (this.team.includes(id)) this.team = this.team.filter((x) => x !== id);
+    else if (this.team.length < TEAM_SIZE) this.team.push(id);
+    else { this.events.toast?.('Team is full (5)'); return; }
+    this.events.changed?.();
+  }
+
+  levelUp(id) {
+    const h = this.hero(id); if (!h || h.level >= MAX_LEVEL) return;
+    const cost = levelCost(h);
+    if (!this.canAfford(cost)) { this.events.toast?.('Not enough gold'); return; }
+    this.pay(cost); h.level++; h.xp = 0;
+    this.events.changed?.();
+  }
+
+  dismiss(id) {
+    this.heroes = this.heroes.filter((h) => h.id !== id);
+    this.team = this.team.filter((x) => x !== id);
+    this.res.gold += 15;
+    this.events.changed?.();
+  }
+
   // ---------------------------------------------------------------- building placement
   startPlacing(type, view) {
     const def = BUILDINGS[type];
@@ -190,6 +237,8 @@ export class World {
     const b = this.addBuilding(new Building(p.type, p.x, p.y, { progress: 0, variant: p.variant, color: this.color }));
     this.fx(FX.dust, cx(b.x + b.w / 2 - 0.5), foot(b.y));
     this.placing = null;
+    this.heroes = []; this.team = []; this.freeSummons = FREE_SUMMONS;
+    this.campaign = { region: 0, stage: 1, best: 0 };
     if (this.jobs.build === 0) this.events.toast?.('Assign a Builder in Pawns to construct it');
     this.events.changed?.();
     return true;
@@ -321,6 +370,7 @@ export class World {
       trees: this.trees.map((t) => [t.stock, Math.round(t.regrow)]),
       stones: this.stones.map((s) => [s.stock, Math.round(s.regrow)]),
       sheep: this.sheep.length,
+      heroes: this.heroes, team: this.team, freeSummons: this.freeSummons, campaign: this.campaign,
     };
   }
 

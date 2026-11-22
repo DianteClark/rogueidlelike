@@ -22,6 +22,7 @@ Add `#reset` to the end of the URL once to wipe your save (`#reset&seed=123` to 
 - Food: pawns eat meat; new pawns arrive when there's house room and food
 - Build houses (place, then builders construct them)
 - Clouds drift above the island and cast shadows on it
+- Heroes: summon (3 free, then gold) with a reveal, 7 classes × 5 colors × 4 rarities, levels, a 5-hero campaign team
 - Pan / pinch-zoom camera, tap buildings and pawns
 - Autosave and "While you were away" offline earnings (up to 12h)
 

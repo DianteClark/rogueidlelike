@@ -1,6 +1,8 @@
 // DOM overlay: resource bar, bottom nav, bottom-sheet panels, toasts.
 import { BUILDINGS, ICONS, buildingSrc, WAR, FREE } from '../data/art.js';
 import { JOBS } from '../world/pawn.js';
+import { heroStats, power, levelCost, className, avatarOf, TEAM_SIZE, MAX_LEVEL, xpToLevel } from '../game/heroes.js';
+import { rarity } from '../data/units.js';
 
 const $ = (s) => document.querySelector(s);
 const enc = (s) => encodeURI(s);
@@ -53,7 +55,8 @@ export class Hud {
   open(name) {
     if (this.world.placing && name !== 'placing') this.world.cancelPlacing();
     this.current = name;
-    document.querySelectorAll('.navbtn').forEach((b) => b.classList.toggle('active', b.dataset.panel === name));
+    const nav = name === 'hero' ? 'heroes' : name;
+    document.querySelectorAll('.navbtn').forEach((b) => b.classList.toggle('active', b.dataset.panel === nav));
     this.render();
     this.panel.classList.remove('hidden');
   }
@@ -124,11 +127,59 @@ export class Hud {
   }
 
   panel_heroes() {
-    const faces = ['King/King Avatar/King_Avatar_01.png', 'Swordsman/Swordsman Avatar/Swordsman_Avatar_1.png',
-      'Berserker/Berserker Avatar/Berserker_Avatar_01.png', 'Horseman/Horseman Avatar/Horseman_Avatar_01.png']
-      .map((f) => `<img class="ic" style="width:64px;height:64px" src="${enc(WAR + f)}" alt="">`).join('');
-    return `<h2>Heroes</h2><div class="row" style="justify-content:space-around">${faces}</div>
-      <p>Summoning, teams and hero levels arrive in an upcoming build. Your heroes will fight the campaign, guard the island and escort pawns.</p>`;
+    const w = this.world;
+    const slots = Array.from({ length: TEAM_SIZE }, (_, i) => {
+      const h = w.hero(w.team[i]);
+      return `<div class="slot" ${h ? `data-act="hero" data-arg="${h.id}" style="border:3px solid ${rarity(h.rarity).color}"` : ''}>
+        ${h ? `<img src="${enc(avatarOf(h))}" alt="">` : ''}</div>`;
+    }).join('');
+    const teamPower = w.team.map((id) => w.hero(id)).filter(Boolean).reduce((s, h) => s + power(h), 0);
+    const cards = [...w.heroes].sort((a, b) => power(b) - power(a)).map((h) => `
+      <button class="hcard" style="--rc:${rarity(h.rarity).color}" data-act="hero" data-arg="${h.id}">
+        ${w.team.includes(h.id) ? '<span class="intm">Team</span>' : ''}
+        <img src="${enc(avatarOf(h))}" alt="">
+        <div class="lv">Lv ${h.level}</div><div class="cls">${className(h)}</div>
+      </button>`).join('');
+    const cost = w.summonCost;
+    return `<h2>Heroes ${w.heroes.length}/${w.rosterCap}</h2>
+      <p>Campaign team · power ${teamPower}</p>
+      <div class="teamrow">${slots}</div>
+      <div class="summonbar">
+        <span>${w.freeSummons > 0 ? `<b>${w.freeSummons} free</b> recruit${w.freeSummons > 1 ? 's' : ''}!` : this.costHtml(cost)}</span>
+        <button class="sbtn wbtn" style="height:54px;padding:0 14px" data-act="summon" ${w.heroes.length >= w.rosterCap || (cost && !w.canAfford(cost)) ? 'disabled' : ''}>Summon</button>
+      </div>
+      <div class="herogrid">${cards || '<p class="muted">No heroes yet. Summon your first!</p>'}</div>`;
+  }
+
+  panel_hero() {
+    const w = this.world, h = w.hero(this.heroId);
+    if (!h) return this.panel_heroes();
+    const s = heroStats(h), r = rarity(h.rarity), inTeam = w.team.includes(h.id);
+    const cost = levelCost(h);
+    return `<div class="herohead"><img src="${enc(avatarOf(h))}" alt="">
+        <div><h2>${h.name}</h2><div class="rar" style="color:${r.color};text-shadow:0 1px 0 #3b2f2a">${r.name} ${h.color} ${className(h)}</div>
+        <div>Level ${h.level} · Power ${power(h)}</div><div class="muted" style="font-size:13px">XP ${h.xp}/${xpToLevel(h)}</div></div></div>
+      <div class="stats">
+        <div>Health <b>${s.hp}</b></div><div>${s.heal ? 'Heal' : 'Attack'} <b>${s.heal || s.atk}</b></div>
+        <div>Defense <b>${s.def}</b></div><div>Range <b>${s.range > 1.6 ? s.range : 'Melee'}</b></div>
+      </div>
+      <div class="btnrow">
+        <button class="sbtn wbtn" data-act="team" data-arg="${h.id}">${inTeam ? 'Remove from team' : 'Add to team'}</button>
+        <button class="sbtn wbtn" data-act="level" data-arg="${h.id}" ${h.level >= MAX_LEVEL || !w.canAfford(cost) ? 'disabled' : ''}>Level up ${this.costHtml(cost).replace(/class="cost/g, 'style="color:#fff" class="cost')}</button>
+      </div>
+      <div class="btnrow">
+        <button class="sbtn red wbtn" data-act="back">Back</button>
+        <button class="sbtn red wbtn" data-act="dismiss" data-arg="${h.id}">Dismiss (+15 gold)</button>
+      </div>`;
+  }
+
+  revealHero(h) {
+    const el = document.getElementById('reveal'), r = rarity(h.rarity);
+    el.style.setProperty('--rc', r.color);
+    document.getElementById('reveal-img').src = enc(avatarOf(h));
+    document.getElementById('reveal-text').innerHTML = `${h.name}<small style="color:${r.color}">${r.name} ${h.color} ${className(h)}</small>`;
+    el.classList.remove('hidden');
+    el.onclick = () => el.classList.add('hidden');
   }
 
   panel_campaign() {
@@ -169,6 +220,12 @@ export class Hud {
     if (a === 'confirm') { if (w.confirmPlacing()) { this.close(); this.toast('Construction started'); } }
     if (a === 'cancel') { this.close(); }
     if (a === 'open') this.open(arg);
+    if (a === 'summon') { const h = w.summon(); if (h) this.revealHero(h); this.render(); }
+    if (a === 'hero') { this.heroId = arg; this.open('hero'); }
+    if (a === 'team') { w.toggleTeam(arg); this.render(); }
+    if (a === 'level') { w.levelUp(arg); this.render(); }
+    if (a === 'back') this.open('heroes');
+    if (a === 'dismiss') { if (this.confirmDismiss === arg) { w.dismiss(arg); this.confirmDismiss = null; this.open('heroes'); } else { this.confirmDismiss = arg; this.toast('Tap Dismiss again to confirm'); } }
     if (a === 'closepanel') this.close();
     this.game.save();
   }
