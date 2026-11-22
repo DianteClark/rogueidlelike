@@ -17,7 +17,18 @@ const game = {
 };
 window.game = game; // handy for debugging
 
+// iPhone home-screen apps report a viewport that is short by the status bar height when the
+// status bar is translucent, leaving an empty strip at the bottom. Use the full screen height there.
+function fitHeight() {
+  const standalone = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
+  const portrait = innerHeight >= innerWidth;
+  let h = innerHeight;
+  if (standalone && portrait && screen.height > h) h = screen.height;
+  document.documentElement.style.setProperty('--app-h', h + 'px');
+}
+
 function resize() {
+  fitHeight();
   game.dpr = Math.min(3, window.devicePixelRatio || 1);
   canvas.width = Math.round(canvas.clientWidth * game.dpr);
   canvas.height = Math.round(canvas.clientHeight * game.dpr);
@@ -30,6 +41,7 @@ async function boot() {
   }
   resize();
   window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', () => setTimeout(resize, 300));
 
   // shared art (terrain, nature, effects, UI); per-kingdom art loads when a color is picked
   const common = collectSrcs({ t: { m: TERRAIN.tilemap(1), m3: TERRAIN.tilemap(3), s: TERRAIN.shadow, f: TERRAIN.foam }, n: NATURE, fx: FX });
