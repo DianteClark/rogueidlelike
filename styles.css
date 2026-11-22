@@ -187,7 +187,8 @@ img { image-rendering: pixelated; }
   border-image: url('assets/ui/banner.png') 128 fill / 26px 52px stretch;
   padding: 0 4px;
 }
-#kpicks { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; width: 100%; }
+#kpicks { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 3px; width: 100%; }
+.kpick img { min-width: 0; }
 .kpick {
   background: none; border: 0; padding: 0; position: relative;
   aspect-ratio: 1; transition: transform .15s;
@@ -246,7 +247,7 @@ img { image-rendering: pixelated; }
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
   color: #fff; text-align: center; transition: opacity .25s;
 }
-#reveal.hidden { opacity: 0; pointer-events: none; }
+#reveal.hidden { opacity: 0; pointer-events: none; visibility: hidden; }
 #reveal .rays {
   position: absolute; width: 640px; height: 640px; left: 50%; top: 42%; margin: -320px 0 0 -320px;
   background: repeating-conic-gradient(from 0deg, var(--rc, #fff) 0deg 8deg, transparent 8deg 22deg);
@@ -379,3 +380,5 @@ body.mapping #topbar, body.mapping #bottombar, body.mapping #panel, body.mapping
 #menu .perk { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin: 6px 0; font-size: 15px; }
 #menu .perk small { font-size: 13px; opacity: .8; }
 #menu .perk .sbtn { height: 46px; min-width: 74px; flex: none; }
+
+img:not([src]), img[src=''] { visibility: hidden; }
