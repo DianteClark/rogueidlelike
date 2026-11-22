@@ -58,6 +58,8 @@ export class BattleHud {
 
   result(win, reward, b, go) {
     const body = $('bh-result-body');
+    const hurt = (b.injuries || []).map(({ hero, state }) => `<div><img src="${enc(avatarOf(hero))}" alt=""><b style="color:${state === 'critical' ? '#a33a2c' : '#a0662f'}">${state === 'critical' ? 'Critical' : 'Wounded'}</b></div>`).join('');
+    const hurtHtml = hurt ? `<p style="margin-bottom:0">Injured</p><div class="lvups">${hurt}</div>${(b.injuries || []).some((i) => i.state === 'critical') ? '<p class="muted" style="font-size:13px">Critical heroes can\'t fight until they heal in a Monastery.</p>' : ''}` : '';
     if (win) {
       const ups = reward.heroes.map(({ hero, levels }) => `<div><img src="${enc(avatarOf(hero))}" alt="">
         ${levels ? `<b style="color:#3d8a2a">Lv ${hero.level}!</b>` : `Lv ${hero.level}`}<br>+${reward.xp} XP</div>`).join('');
@@ -65,12 +67,12 @@ export class BattleHud {
         <p><span class="cost"><img src="${enc(ICONS.gold)}" alt="">+${reward.gold}</span>
         ${reward.recruits ? ` &nbsp;<b>+${reward.recruits} free recruit${reward.recruits > 1 ? 's' : ''}</b>` : ''}</p>
         <div class="lvups">${ups}</div>
-        ${reward.unlocked ? `<p><b>${reward.unlocked}</b></p>` : ''}
+        ${reward.unlocked ? `<p><b>${reward.unlocked}</b></p>` : ''}${hurtHtml}
         <div class="btnrow">${go.next ? '<button class="sbtn wbtn" data-go="next">Next stage</button>' : ''}
           <button class="sbtn wbtn" data-go="map">Map</button><button class="sbtn red wbtn" data-go="island">Island</button></div>`;
     } else {
       body.innerHTML = `<h2 style="color:#a33a2c">${b.retreated ? 'Retreat' : 'Defeat'}</h2>
-        <p>${b.retreated ? 'Your heroes fall back to the island.' : b.timedOut ? 'The fight dragged on too long and your heroes withdrew.' : 'Your heroes were overwhelmed. Level them up or recruit more, then try again.'}</p>
+        ${hurtHtml}<p>${b.retreated ? 'Your heroes fall back to the island.' : b.timedOut ? 'The fight dragged on too long and your heroes withdrew.' : 'Your heroes were overwhelmed. Level them up or recruit more, then try again.'}</p>
         <div class="btnrow"><button class="sbtn wbtn" data-go="retry">Retry</button>
           <button class="sbtn wbtn" data-go="map">Map</button><button class="sbtn red wbtn" data-go="island">Island</button></div>`;
     }

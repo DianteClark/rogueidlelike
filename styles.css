@@ -342,3 +342,7 @@ body.mapping #topbar, body.mapping #bottombar, body.mapping #panel, body.mapping
 .chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 4px; }
 .chip { font-size: 12px; padding: 3px 7px; border-radius: 8px; background: rgba(59,47,42,.12); }
 .chip.on { background: #3f7fb5; color: #fff; }
+
+.hurt { font-size: 11px; border-radius: 6px; padding: 1px 5px; margin-top: 2px; color: #fff; }
+.hurt.wounded { background: #c88a3a; }
+.hurt.critical { background: #b13a2c; }

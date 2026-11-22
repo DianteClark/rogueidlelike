@@ -78,7 +78,7 @@ export const BUILDINGS = {
   tower:     { name: 'Tower',     file: 'Tower.png',     w: 2, h: 1, cost: { wood: 40, gold: 20 }, sink: 24, build: 30, defense: true },
   barracks:  { name: 'Barracks',  file: 'Barracks.png',  w: 3, h: 2, cost: { wood: 60, gold: 30 }, sink: 10, build: 40, locked: true },
   archery:   { name: 'Archery',   file: 'Archery.png',   w: 3, h: 2, cost: { wood: 60, gold: 30 }, sink: 14, build: 40, locked: true },
-  monastery: { name: 'Monastery', file: 'Monastery.png', w: 3, h: 2, cost: { wood: 80, gold: 50 }, sink: 8, build: 50, locked: true },
+  monastery: { name: 'Monastery', file: 'Monastery.png', w: 3, h: 2, cost: { wood: 80, gold: 50 }, sink: 8, build: 50, beds: 2 },
 };
 export const buildingSrc = (file, color = 'Blue') => `${FREE}Buildings/${color} Buildings/${file}`;
 

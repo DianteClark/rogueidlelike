@@ -1,7 +1,7 @@
 // DOM overlay: resource bar, bottom nav, bottom-sheet panels, toasts.
 import { BUILDINGS, ICONS, buildingArt, WAR, FREE } from '../data/art.js';
 import { JOBS } from '../world/pawn.js';
-import { heroStats, power, levelCost, className, avatarOf, groupName, TEAM_SIZE, MAX_LEVEL, xpToLevel } from '../game/heroes.js';
+import { heroStats, power, levelCost, className, avatarOf, groupName, TEAM_SIZE, MAX_LEVEL, xpToLevel, stateLabel } from '../game/heroes.js';
 import { teamSynergies } from '../game/synergy.js';
 import { rarity, REGIONS, ENEMIES, stageEnemies } from '../data/units.js';
 
@@ -162,6 +162,7 @@ export class Hud {
         ${w.team.includes(h.id) ? '<span class="intm">Team</span>' : w.guards.includes(h.id) ? '<span class="intm" style="background:#a0662f">Guard</span>' : ''}
         <img src="${enc(avatarOf(h))}" alt="">
         <div class="lv">Lv ${h.level}</div><div class="cls">${className(h)}</div>
+        ${h.state === 'wounded' || h.state === 'critical' ? `<div class="hurt ${h.state}">${h.state === 'critical' ? (h.inMonastery ? 'Healing' : 'Critical') : 'Wounded'}</div>` : ''}
       </button>`).join('');
     const cost = w.summonCost;
     const guards = Array.from({ length: w.guardCap }, (_, i) => {
@@ -173,7 +174,7 @@ export class Hud {
       <p>Campaign team · power ${teamPower}</p>
       <div class="teamrow">${slots}</div>
       ${this.synergyHtml(w.team.map((id) => w.hero(id)).filter(Boolean))}
-      <p>Island guards · defense ${w.defensePower}${nextRaid}</p>
+      <p>Island guards · defense ${w.defensePower}${nextRaid}${w.bedCount ? ` · Monastery beds ${w.bedsUsed}/${w.bedCount}` : ''}</p>
       <div class="teamrow" style="grid-template-columns:repeat(5,1fr)">${guards}</div>
       <div class="summonbar">
         <span>${w.freeSummons > 0 ? `<b>${w.freeSummons} free</b> recruit${w.freeSummons > 1 ? 's' : ''}!` : this.costHtml(cost)}</span>
@@ -198,7 +199,10 @@ export class Hud {
     const cost = levelCost(h);
     return `<div class="herohead"><img src="${enc(avatarOf(h))}" alt="">
         <div><h2>${h.name}</h2><div class="rar" style="color:${r.color};text-shadow:0 1px 0 #3b2f2a">${r.name} ${groupName(h)} ${className(h)}</div>
-        <div>Level ${h.level} · Power ${power(h)}</div><div class="muted" style="font-size:13px">XP ${h.xp}/${xpToLevel(h)}</div></div></div>
+        <div>Level ${h.level} · Power ${power(h)}</div><div class="muted" style="font-size:13px">XP ${h.xp}/${xpToLevel(h)}</div>
+        ${stateLabel(h) ? `<div class="hurt ${h.state}" style="display:inline-block">${stateLabel(h)}</div>` : ''}</div></div>
+      ${h.state === 'critical' ? `<p>${h.inMonastery ? 'Resting in the Monastery.' : 'Critical heroes can\'t fight. They heal 5× faster in a Monastery bed.'}</p>
+        <div class="btnrow"><button class="sbtn wbtn" data-act="monastery" data-arg="${h.id}">${h.inMonastery ? 'Leave Monastery' : `Send to Monastery (${w.bedsUsed}/${w.bedCount} beds)`}</button></div>` : ''}
       <div class="stats">
         <div>Health <b>${s.hp}</b></div><div>${s.heal ? 'Heal' : 'Attack'} <b>${s.heal || s.atk}</b></div>
         <div>Defense <b>${s.def}</b></div><div>Range <b>${s.range > 1.6 ? s.range : 'Melee'}</b></div>
@@ -286,6 +290,7 @@ export class Hud {
     if (a === 'hero') { this.heroId = arg; this.open('hero'); }
     if (a === 'team') { w.toggleTeam(arg); this.render(); }
     if (a === 'guard') { w.toggleGuard(arg); this.render(); }
+    if (a === 'monastery') { w.toggleMonastery(arg); this.render(); }
     if (a === 'level') { w.levelUp(arg); this.render(); }
     if (a === 'back') this.open('heroes');
     if (a === 'dismiss') { if (this.confirmDismiss === arg) { w.dismiss(arg); this.confirmDismiss = null; this.open('heroes'); } else { this.confirmDismiss = arg; this.toast('Tap Dismiss again to confirm'); } }

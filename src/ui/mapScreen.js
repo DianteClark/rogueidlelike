@@ -92,14 +92,16 @@ export class MapScreen {
   render() {
     const w = this.world, c = w.campaign, R = REGIONS[c.region], s = this.sel;
     const foes = [...new Set(stageEnemies(c.region, s))].map((id) => `<img src="${enc(ENEMIES[id].avatar)}" alt="">`).join('');
-    const team = w.team.map((id) => w.hero(id)).filter(Boolean);
+    const all = w.team.map((id) => w.hero(id)).filter(Boolean);
+    const team = all.filter((h) => h.state !== 'critical');
+    const out = all.length - team.length;
     const tp = team.reduce((a, h) => a + power(h), 0);
     const cleared = s <= c.best;
     $('map-title').textContent = R.name;
     $('map-body').innerHTML = `
       <h2>${s === R.stages ? 'Boss — the Troll' : 'Stage ' + s}${cleared ? ' <small style="color:#3d7a2a">(cleared)</small>' : ''}</h2>
       <div class="foes">${foes}</div>
-      <p>Team power <b>${tp}</b> · ${team.length}/5 heroes · idle loot ${w.campaignRate} gold/min</p>
+      <p>Team power <b>${tp}</b> · ${team.length}/5 heroes${out ? ` · <b style="color:#a33a2c">${out} critical</b>` : ''} · idle loot ${w.campaignRate} gold/min</p>
       <button class="bigbtn" style="width:100%" data-map="fight" ${team.length ? '' : 'disabled'}>${team.length ? (cleared ? 'Replay' : 'Battle!') : 'Recruit heroes first'}</button>`;
   }
 

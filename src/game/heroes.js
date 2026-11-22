@@ -42,8 +42,9 @@ export function heroStats(h) {
   const c = heroDef(h.cls), r = rarity(h.rarity);
   const growth = r.mul * (1 + 0.1 * (h.level - 1)) * (1 + 0.2 * (h.stars - 1));
   const s = c.stats;
+  const hurt = h.state === 'wounded' ? 0.8 : 1;
   return {
-    hp: Math.round(s.hp * growth), atk: Math.round(s.atk * growth), heal: Math.round((s.heal || 0) * growth),
+    hp: Math.round(s.hp * growth * hurt), atk: Math.round(s.atk * growth * hurt), heal: Math.round((s.heal || 0) * growth * hurt),
     def: Math.round(s.def * (1 + 0.05 * (h.level - 1)) * r.mul), rate: s.rate, range: s.range, speed: s.speed,
   };
 }
@@ -63,6 +64,21 @@ export function addXp(h, amount) {
   while (h.level < MAX_LEVEL && h.xp >= xpToLevel(h)) { h.xp -= xpToLevel(h); h.level++; ups++; }
   return ups;
 }
+
+// Injury: falling in a fight wounds a hero (weaker, heals on its own). Falling again while wounded
+// makes them Critical: they can't fight and only recover in a Monastery bed.
+export const WOUND_TIME = 180, LIGHT_WOUND = 90, CRITICAL_TIME = 480;
+export function injure(h, light = false) {
+  if (h.state === 'wounded' || h.state === 'critical') { h.state = 'critical'; h.recover = CRITICAL_TIME; h.inMonastery = false; return 'critical'; }
+  h.state = 'wounded'; h.recover = light ? LIGHT_WOUND : WOUND_TIME; return 'wounded';
+}
+export const canFight = (h) => h.state !== 'critical' && h.state !== 'fallen';
+export function stateLabel(h) {
+  if (h.state === 'wounded') return `Wounded ${fmtTime(h.recover)}`;
+  if (h.state === 'critical') return h.inMonastery ? `Recovering ${fmtTime(h.recover)}` : `Critical ${fmtTime(h.recover * 5)}`;
+  return '';
+}
+const fmtTime = (s) => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.floor(Math.max(0, s) % 60)).padStart(2, '0')}`;
 
 export const className = (h) => heroDef(h.cls).name;
 export const avatarOf = (h) => heroDef(h.cls).avatar(h.color);

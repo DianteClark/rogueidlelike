@@ -6,7 +6,7 @@ import { Terrain } from '../world/terrain.js';
 import { rng } from '../world/generate.js';
 import { TILE, FX, TERRAIN, NATURE } from '../data/art.js';
 import { HERO_CLASSES, ENEMIES, REGIONS, stageEnemies, stageScale } from '../data/units.js';
-import { heroStats, heroDef } from '../game/heroes.js';
+import { heroStats, heroDef, canFight } from '../game/heroes.js';
 import { teamSynergies, applyBonuses } from '../game/synergy.js';
 import { mod, KINGDOMS } from '../data/kingdoms.js';
 
@@ -221,7 +221,7 @@ export class Battle {
   // Load every sprite this fight needs, then set up the board.
   async prepare() {
     const w = this.world, k = w.kingdom;
-    const team = w.team.map((id) => w.hero(id)).filter(Boolean);
+    const team = w.team.map((id) => w.hero(id)).filter((h) => h && canFight(h));
     this.team = team;
     const enemyIds = stageEnemies(this.regionIdx, this.stage);
     const srcs = collectSrcs({ fx: FX, t: [TERRAIN.tilemap(this.region.terrain), TERRAIN.foam, TERRAIN.shadow], d: [NATURE.bushes, NATURE.rocks] });

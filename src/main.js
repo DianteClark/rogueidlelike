@@ -85,6 +85,7 @@ async function boot() {
       onEnd: (win, battle) => {
         if (battle !== game.battle) return;
         const reward = win ? w.winStage(stage, battle.team) : null;
+        battle.injuries = w.applyCasualties(battle.heroes, win);
         const leave = () => { game.battle = null; bhud.hide(); hud.refresh(); w.save(); };
         const R = REGIONS[c.region];
         bhud.result(win, reward, battle, {

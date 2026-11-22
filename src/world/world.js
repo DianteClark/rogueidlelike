@@ -6,7 +6,7 @@ import { Pawn, JOBS } from './pawn.js';
 import { BUILDINGS, NATURE, FX, ICONS, TILE } from '../data/art.js';
 import { img } from '../engine/assets.js';
 import { KINGDOMS, mod } from '../data/kingdoms.js';
-import { makeHero, SUMMON_COST, FREE_SUMMONS, TEAM_SIZE, BASE_ROSTER, levelCost, MAX_LEVEL, addXp, xpToLevel } from '../game/heroes.js';
+import { makeHero, SUMMON_COST, FREE_SUMMONS, TEAM_SIZE, BASE_ROSTER, levelCost, MAX_LEVEL, addXp, xpToLevel, injure } from '../game/heroes.js';
 import { REGIONS, HERO_CLASSES, MONSTER_HEROES, ENEMIES } from '../data/units.js';
 import { Raid, planRaid, raidPower } from '../battle/raid.js';
 import { power } from '../game/heroes.js';
@@ -212,6 +212,47 @@ export class World {
 
   hero(id) { return this.heroes.find((h) => h.id === id); }
 
+  // ---------------------------------------------------------------- injuries & the Monastery
+  get bedCount() {
+    return this.buildings.filter((b) => b.done && b.def.beds).reduce((s, b) => s + b.def.beds, 0) + (this.buildings.some((b) => b.done && b.def.beds) ? this.mod('monasterySlots', 0) : 0);
+  }
+  get bedsUsed() { return this.heroes.filter((h) => h.inMonastery).length; }
+
+  toggleMonastery(id) {
+    const h = this.hero(id); if (!h || h.state !== 'critical') return;
+    if (h.inMonastery) h.inMonastery = false;
+    else if (this.bedsUsed < this.bedCount) { h.inMonastery = true; this.events.toast?.(`${h.name} rests in the Monastery`); }
+    else { this.events.toast?.(this.bedCount ? 'Monastery beds are full' : 'Build a Monastery to heal critical heroes'); return; }
+    this.events.changed?.();
+  }
+
+  // heroes whose units fell in a fight get hurt; light wounds after a victory
+  applyCasualties(units, won) {
+    const out = [];
+    for (const u of units) if (u.dead && u.hero && this.heroes.includes(u.hero)) out.push({ hero: u.hero, state: injure(u.hero, won) });
+    if (out.some((o) => o.state === 'critical')) {
+      // send critical heroes to free beds automatically
+      for (const o of out) if (o.state === 'critical' && this.bedsUsed < this.bedCount) o.hero.inMonastery = true;
+    }
+    this.events.changed?.();
+    return out;
+  }
+
+  recoveryTick(dt) {
+    let changed = false;
+    for (const h of this.heroes) {
+      if (h.state === 'wounded') {
+        h.recover -= dt;
+        if (h.recover <= 0) { h.state = 'healthy'; h.recover = 0; changed = true; }
+      } else if (h.state === 'critical') {
+        // a Monastery bed heals fast; outside one, critical heroes mend very slowly
+        h.recover -= dt * (h.inMonastery ? this.mod('recovery') : 0.2);
+        if (h.recover <= 0) { h.state = 'wounded'; h.recover = 45; h.inMonastery = false; changed = true; this.events.toast?.(`${h.name} is back on their feet`); }
+      }
+    }
+    if (changed) this.events.changed?.();
+  }
+
   // Beating a monster for the first time lets it join your summons.
   markDefeated(id) {
     if (!MONSTER_HEROES[id] || this.defeated.includes(id)) return;
@@ -303,6 +344,7 @@ export class World {
       if (this.raid.over && !this.raid.reported) {
         this.raid.reported = true;
         const r = this.raid;
+        this.applyCasualties(r.heroes, r.over === 'defended');
         const lost = Object.entries(r.stolen).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${k}`).join(', ');
         this.events.toast?.(r.over === 'defended' ? `Raid defeated! +${r.bounty || 0} gold` : `Raiders escaped with ${lost || 'nothing'}`, 3500);
         // Beast Horde: beaten raiders sometimes swear loyalty
@@ -471,6 +513,7 @@ export class World {
     }
 
     this.updateRaids(dt);
+    this.recoveryTick(dt);
 
     // idle gold from campaign progress
     this.campGold = (this.campGold || 0) + this.campaignRate / 60 * dt;
@@ -610,6 +653,7 @@ export class World {
       const used = Math.min(need, buildTime);
       b.progress = Math.min(1, b.progress + used / b.def.build); buildTime -= used;
     }
+    this.recoveryTick(capped);
     // raids that came while you were away (sieges will wait for you; these don't)
     const raids = [];
     if (this.campaign.best >= 1 && this.raidAt != null) {

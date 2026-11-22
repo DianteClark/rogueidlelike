@@ -34,6 +34,7 @@ Add `#reset` to the end of the URL once to wipe your save (`#reset&seed=123` to 
 - All kingdoms are unlocked for testing until runs and Legacy exist (`UNLOCK_ALL_FOR_TESTING` in src/data/kingdoms.js)
 - Units in battle stand on a coloured ring: yours vs the enemy's
 - Tap and hold any building (castle included) to pick it up, drag it (green = fits, red = blocked) and let go
+- Injuries: heroes who fall get Wounded (weaker, heal on their own); fall again and they're Critical (can't fight). The Monastery (now buildable) has beds that heal Critical heroes 5× faster
 - Pan / pinch-zoom camera, tap buildings and pawns
 - Autosave and "While you were away" offline earnings (up to 12h)
 
