@@ -47,7 +47,6 @@ if os.path.isdir(ui):
         print('ui', name, out.size, 'slice', c)
     nine('Papers/RegularPaper.png', 'paper.png')
     nine('Papers/SpecialPaper.png', 'paper-special.png')
-    nine('Wood Table/WoodTable.png', 'wood.png')
     nine('Banners/Banner.png', 'banner.png')
     nine('Buttons/BigBlueButton_Regular.png', 'btn-blue.png')
     nine('Buttons/BigBlueButton_Pressed.png', 'btn-blue-pressed.png')

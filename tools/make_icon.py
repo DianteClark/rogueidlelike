@@ -70,6 +70,6 @@ out = os.path.join(root, 'icons')
 os.makedirs(out, exist_ok=True)
 flat = bg.convert('RGB')
 flat.save(os.path.join(out, 'icon-1024.png'))
-for size in (512, 192, 180, 167, 152, 120):
+for size in (512, 192, 180):
     flat.resize((size, size), Image.LANCZOS).save(os.path.join(out, f'icon-{size}.png'))
 print('icons written')

@@ -1,8 +1,8 @@
 // Pawns: the little workers. Each has a job and runs a small state machine:
 // think → walk to work → work (animation loops) → carry back to the castle → deposit → think.
 import { Anim } from '../engine/assets.js';
-import { TILE, FX, ICONS } from '../data/art.js';
-import { pawnArt, cx, foot } from './entities.js';
+import { TILE, FX, pawnArt } from '../data/art.js';
+import { cx, foot } from './entities.js';
 
 const T = TILE;
 const SPEED = 92;            // world px per second
@@ -213,4 +213,3 @@ export class Pawn {
   draw(ctx) { this.anim.draw(ctx, this.px, this.py, this.flip); }
 }
 
-export { ICONS };

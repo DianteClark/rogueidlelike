@@ -2,18 +2,14 @@
 // pawns shelter in the castle. Raiders that reach the castle steal resources and sail away.
 import { Unit, Projectile } from './battle.js';
 import { Anim, loadAll, collectSrcs } from '../engine/assets.js';
-import { ENEMIES, HERO_CLASSES, REGIONS, stageScale, regionOf, TOTAL_STAGES } from '../data/units.js';
+import { ENEMIES, REGIONS, stageScale, regionOf, TOTAL_STAGES } from '../data/units.js';
 import { heroStats, heroDef, canFight } from '../game/heroes.js';
 import { teamSynergies, applyBonuses } from '../game/synergy.js';
 import { FX, TILE, FREE } from '../data/art.js';
 import { mod, KINGDOMS } from '../data/kingdoms.js';
 
 const T = TILE;
-export const RAID_TIERS = {
-  gentle: { name: 'Raid' },
-  real: { name: 'Big raid' },   // pawns left outside can die, buildings get wrecked
-  siege: { name: 'Siege' },     // Blood Moon: a huge horde with a boss attacks the castle itself
-};
+// Raid tiers: 'gentle' (steal), 'real' (pawns can die, buildings burn), 'siege' (Blood Moon: attacks the castle)
 
 export function planSiege(world) {
   const n = world.era.sieges;
@@ -183,7 +179,6 @@ export class Raid {
   // siege raiders pound the castle itself
   batter(u, dt) {
     const w = this.world;
-    u.cool -= 0; // attack timing reuses the unit cooldown
     if (u.state === 'attack') return;
     if (u.cool <= 0) {
       const atk = u.art.attack[0];

@@ -89,7 +89,6 @@ img { image-rendering: pixelated; }
 .navbtn img { width: 40px; height: 40px; margin: -16px 0 -6px; object-fit: contain; }
 .navbtn:active, .navbtn.active { border-image-source: url('assets/ui/btn-blue-pressed.png'); }
 .navbtn:active img, .navbtn.active img { transform: translateY(3px); }
-.navbtn.locked { filter: grayscale(.8) brightness(.85); }
 
 /* Panel (bottom sheet) */
 #panel {
@@ -309,11 +308,6 @@ body.battling #topbar, body.battling #menubtn, body.battling #bottombar, body.ba
   25%, 70% { transform: skewY(-6deg) translateX(0); }
   100% { transform: skewY(-6deg) translateX(-110%); }
 }
-.campaign-stages { display: flex; gap: 4px; margin: 8px 0; }
-.campaign-stages div { flex: 1; height: 12px; border-radius: 4px; background: rgba(59,47,42,.18); }
-.campaign-stages div.done { background: #6fb04f; }
-.campaign-stages div.cur { background: #f5b13a; }
-.campaign-stages div.boss { outline: 2px solid #b13a2c; }
 .foes { display: flex; gap: 2px; flex-wrap: wrap; margin: 4px 0 8px; }
 .foes img { width: 48px; height: 48px; object-fit: contain; }
 

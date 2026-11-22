@@ -248,7 +248,6 @@ function tryIsland(R) {
       bushes: take(openLand, 7),
       rocks: take(openLand, 4),
       waterRocks: take(water, 5),
-      duck: water.length ? take(water, 1)[0] : [1, 1],
     },
   };
 }

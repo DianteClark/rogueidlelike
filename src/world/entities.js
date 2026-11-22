@@ -1,6 +1,6 @@
 // Things that live on the island: resource nodes, buildings, sheep, pawns, effects.
 import { Anim, drawFrame, img, tintSheet } from '../engine/assets.js';
-import { NATURE, FX, BUILDINGS, buildingArt, TILE, pawnArt } from '../data/art.js';
+import { NATURE, FX, BUILDINGS, buildingArt, TILE } from '../data/art.js';
 
 const T = TILE;
 export const cx = (x) => x * T + T / 2;   // tile → world centre
@@ -193,7 +193,7 @@ export class FloatText {
 export class Decor {
   constructor(def, x, y, { fps = 8, ox = 0, oy = 0, bob = false } = {}) {
     this.anim = new Anim(def, fps); this.anim.t = Math.random() * 3;
-    this.px = cx(x) + ox; this.py = foot(y) + oy; this.bob = bob; this.flat = !!def.flat;
+    this.px = cx(x) + ox; this.py = foot(y) + oy; this.bob = bob;
   }
   update(dt) { this.anim.update(dt); }
   get sortY() { return this.py - 20; }
@@ -266,4 +266,3 @@ export class Duck {
   }
 }
 
-export { pawnArt };

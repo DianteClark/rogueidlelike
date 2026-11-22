@@ -1,6 +1,6 @@
 // Start-of-run screen: pick a kingdom. Locked ones can be inspected; they unlock with Legacy.
 import { KINGDOMS, KINGDOM_ORDER, kingAvatar, BOOSTS, saveMeta, RELICS } from '../data/kingdoms.js';
-import { WAR, FREE } from '../data/art.js';
+import { FREE } from '../data/art.js';
 
 const enc = (s) => encodeURI(s);
 const ICON = (n) => enc(`${FREE}UI Elements/UI Elements/Icons/Icon_${n}.png`);

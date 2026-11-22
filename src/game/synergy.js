@@ -7,7 +7,7 @@ import { heroDef } from './heroes.js';
 
 const TIERS = [2, 3, 4, 5];
 
-export const COLOR_BONUS = {
+const COLOR_BONUS = {
   Blue:   { name: 'Shieldwall', key: 'shield',    values: [0.10, 0.18, 0.26, 0.35], text: (v) => `start with a ${pct(v)} shield` },
   Red:    { name: 'Bloodrage',  key: 'frenzy',    values: [0.20, 0.35, 0.50, 0.70], text: (v) => `+${pct(v)} attack speed below half health` },
   Yellow: { name: 'Sunstrike',  key: 'crit',      values: [0.08, 0.14, 0.20, 0.28], text: (v) => `+${pct(v)} critical chance` },
@@ -15,7 +15,7 @@ export const COLOR_BONUS = {
   Black:  { name: 'Grave Hunger', key: 'lifesteal', values: [0.08, 0.14, 0.20, 0.28], text: (v) => `heal for ${pct(v)} of damage dealt` },
 };
 
-export const TRIBE_BONUS = {
+const TRIBE_BONUS = {
   Goblins: { name: 'Swarm',     key: 'haste',  values: [0.10, 0.18, 0.26, 0.35], text: (v) => `+${pct(v)} move and attack speed` },
   Brutes:  { name: 'Thick Hide', key: 'hpMul', values: [0.12, 0.22, 0.32, 0.45], text: (v) => `+${pct(v)} health` },
   Forest:  { name: 'Wild Growth', key: 'regen', values: [0.006, 0.010, 0.014, 0.020], text: (v) => `heal ${pct(v, 1)} health per second` },

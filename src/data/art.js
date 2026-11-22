@@ -8,7 +8,6 @@ export const WAR = 'assets/packs/warfare/';
 
 export const COLORS = ['Blue', 'Red', 'Yellow', 'Purple', 'Black'];
 export const TILE = 64;
-export const FPS = 10; // pack animation speed
 
 const unit = (src) => ({ src, fw: 192, fh: 192, ax: 96, ay: 136 });
 
@@ -82,11 +81,11 @@ export const BUILDINGS = {
   archery:   { name: 'Archery',   file: 'Archery.png',   w: 3, h: 2, cost: { wood: 60, gold: 30 }, sink: 14, build: 40, locked: true },
   monastery: { name: 'Monastery', file: 'Monastery.png', w: 3, h: 2, cost: { wood: 80, gold: 50 }, sink: 8, build: 50, beds: 2 },
 };
-export const buildingSrc = (file, color = 'Blue') => `${FREE}Buildings/${color} Buildings/${file}`;
+const buildingSrc = (file, color = 'Blue') => `${FREE}Buildings/${color} Buildings/${file}`;
 
 // The Beast Horde builds with Enemy Pack structures instead of castles and keeps.
 const EX = `${ENEMY}Extra/`;
-export const BEAST_BUILDINGS = {
+const BEAST_BUILDINGS = {
   castle:    { name: 'Hollow Tree', src: `${EX}Dead Tree/Dead Tree.png`, sink: 5 },
   house:     { name: 'Gnome Hut', src: `${EX}Gnome Buildings/Gnome Hut.png`, sink: 40 },
   tower:     { name: 'Mushroom Tower', src: `${EX}Gnome Buildings/Gnome Tower.png`, sink: 26 },

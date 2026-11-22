@@ -9,14 +9,8 @@ import { KINGDOMS, mod, loadMeta, RELICS } from '../data/kingdoms.js';
 import { makeHero, SUMMON_COST, FREE_SUMMONS, TEAM_SIZE, BASE_ROSTER, levelCost, MAX_LEVEL, addXp, xpToLevel, injure } from '../game/heroes.js';
 import { REGIONS, HERO_CLASSES, MONSTER_HEROES, ENEMIES, TOTAL_STAGES, regionOf } from '../data/units.js';
 import { Raid, planRaid, planSiege, raidPower } from '../battle/raid.js';
+import { TRIPS } from '../data/trips.js';
 import { power } from '../game/heroes.js';
-
-// Resource trips: pawns sail to nearby islands for a haul. Escorts make ambushes less likely and less deadly.
-export const TRIPS = {
-  grove: { name: 'Pine Isle', res: 'wood', per: 70, mins: 6, danger: 0.25 },
-  mine:  { name: 'Gold Reef', res: 'gold', per: 45, mins: 10, danger: 0.4 },
-  pasture: { name: 'Sheep Cay', res: 'meat', per: 60, mins: 8, danger: 0.3 },
-};
 
 const FIRST_RAID = 240, RAID_GAP = [360, 600], RAID_WARN = 90, GUARD_CAP = 3;
 
@@ -25,7 +19,7 @@ export const SAVE_KEY = 'tinycrowns.save.v2';
 const MAX_SHEEP = 6;
 const PAWN_COST = 10;          // meat for a new pawn
 const EAT_EVERY = 30;          // seconds per meat per pawn
-export const OFFLINE_CAP_H = 12;
+const OFFLINE_CAP_H = 12;
 
 // per-worker income per minute, used for offline progress (about half of what they make live)
 const OFFLINE_RATE = { wood: 8, gold: 5, meat: 7 };
@@ -44,7 +38,7 @@ export class World {
     this.placing = null;
     this.heroes = []; this.team = []; this.guards = []; this.freeSummons = FREE_SUMMONS; this.defeated = []; this.hall = [];
     this.raid = null; this.raidAt = null; this.raidPlan = null; this.trips = [];
-    this.campaign = { region: 0, stage: 1, best: 0 };
+    this.campaign = { stage: 1, best: 0 };
     this.era = { started: Date.now(), sieges: 0, won: false, endless: false, raidsWon: 0, raidsLost: 0 };
     this.castleHp = null; this.siegeAt = null;
     this.clouds = Array.from({ length: 3 }, (_, i) => ({ i: (i * 3) % 8, x: Math.random() * 2000 - 600, y: Math.random() * 1600, s: 7 + Math.random() * 6 }));

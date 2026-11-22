@@ -82,7 +82,6 @@ export const HERO_CLASSES = {
   },
 };
 
-export const KING_AVATAR = (c) => `${WAR}King/King Avatar/King_Avatar_0${colorIndex(c) + 1}.png`;
 
 export const RARITIES = [
   { id: 'common', name: 'Common', weight: 62, mul: 1, color: '#c9c2b0' },

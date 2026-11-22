@@ -1,14 +1,14 @@
 // Campaign sea chart: each stage is a little island; sail along the route, tap an island to fight there.
 import { Terrain } from '../world/terrain.js';
-import { TILE, TERRAIN, NATURE, ICONS } from '../data/art.js';
+import { TILE, TERRAIN, NATURE } from '../data/art.js';
 import { REGIONS, ENEMIES, stageEnemies, regionOf, firstStageOf } from '../data/units.js';
-import { KINGDOMS, kingAvatar } from '../data/kingdoms.js';
+import { kingAvatar } from '../data/kingdoms.js';
 import { power } from '../game/heroes.js';
 import { img, drawFrame, loadAll, collectSrcs } from '../engine/assets.js';
 import { rng } from '../world/generate.js';
 
 const T = TILE;
-export const MAP_W = 10, MAP_H = 17;
+const MAP_W = 10, MAP_H = 17;
 const enc = (s) => encodeURI(s);
 const $ = (s) => document.getElementById(s);
 
@@ -165,4 +165,3 @@ export class MapScreen {
   }
 }
 
-export { ICONS };

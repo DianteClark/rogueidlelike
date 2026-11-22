@@ -1,10 +1,10 @@
 // DOM overlay: resource bar, bottom nav, bottom-sheet panels, toasts.
-import { BUILDINGS, ICONS, buildingArt, WAR, FREE } from '../data/art.js';
+import { BUILDINGS, ICONS, buildingArt } from '../data/art.js';
 import { JOBS } from '../world/pawn.js';
 import { heroStats, power, levelCost, className, avatarOf, groupName, TEAM_SIZE, MAX_LEVEL, xpToLevel, stateLabel } from '../game/heroes.js';
 import { teamSynergies } from '../game/synergy.js';
-import { TRIPS } from '../world/world.js';
-import { rarity, REGIONS, ENEMIES, stageEnemies } from '../data/units.js';
+import { TRIPS } from '../data/trips.js';
+import { rarity } from '../data/units.js';
 
 const $ = (s) => document.querySelector(s);
 const enc = (s) => encodeURI(s);
@@ -252,28 +252,6 @@ export class Hud {
     el.onclick = () => el.classList.add('hidden');
   }
 
-  panel_campaign() {
-    const w = this.world, c = w.campaign, R = REGIONS[c.region];
-    const bars = Array.from({ length: R.stages }, (_, i) => {
-      const n = i + 1;
-      return `<div class="${n <= c.best ? 'done' : n === c.stage ? 'cur' : ''} ${n === R.stages ? 'boss' : ''}"></div>`;
-    }).join('');
-    const foes = [...new Set(stageEnemies(c.region, c.stage))].map((id) => `<img src="${enc(ENEMIES[id].avatar)}" alt="${ENEMIES[id].name}">`).join('');
-    const team = w.team.map((id) => w.hero(id)).filter(Boolean);
-    const tp = team.reduce((s, h) => s + power(h), 0);
-    const cleared = c.best >= R.stages;
-    return `<h2>${R.name}</h2>
-      <div class="campaign-stages">${bars}</div>
-      <p>${cleared ? 'Region conquered! Replay the boss for loot. More regions are coming.' : `Next: <b>${c.stage === R.stages ? 'Boss — the Troll' : 'Stage ' + c.stage}</b>`}</p>
-      <div class="foes">${foes}</div>
-      <p>Your team power: <b>${tp}</b> · ${team.length}/5 heroes</p>
-      <p class="muted">Idle loot: ${w.campaignRate} gold/min from your best stage.</p>
-      <div class="btnrow">
-        ${c.best > 0 ? `<button class="sbtn wbtn" style="height:60px" data-act="replay" ${team.length ? '' : 'disabled'}>Replay ${c.best === R.stages ? 'Boss' : 'Stage ' + c.best}</button>` : ''}
-        ${cleared ? '' : `<button class="sbtn wbtn" style="height:60px;font-size:20px" data-act="battle" ${team.length ? '' : 'disabled'}>${team.length ? 'Battle!' : 'Recruit heroes first'}</button>`}
-      </div>`;
-  }
-
   panel_building() {
     const b = this.inspect; if (!b) return '';
     const status = b.done ? (b.def.pawns ? `Houses ${b.def.pawns} pawns.` : '') :
@@ -314,8 +292,6 @@ export class Hud {
     if (a === 'confirm') { if (w.confirmPlacing()) { this.close(); this.toast('Construction started'); } }
     if (a === 'cancel') { this.close(); }
     if (a === 'open') this.open(arg);
-    if (a === 'battle') { this.close(); this.game.startBattle(false); }
-    if (a === 'replay') { this.close(); this.game.startBattle(true); }
     if (a === 'summon') { const h = w.summon(); if (h) this.revealHero(h); this.render(); }
     if (a === 'hero') { this.heroId = arg; this.open('hero'); }
     if (a === 'team') { w.toggleTeam(arg); this.render(); }
@@ -339,4 +315,3 @@ export class Hud {
   }
 }
 
-export { FREE };

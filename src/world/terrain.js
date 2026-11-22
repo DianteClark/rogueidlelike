@@ -8,7 +8,7 @@
 import { img, drawFrame } from '../engine/assets.js';
 import { TERRAIN, TILE } from '../data/art.js';
 
-export const BLOCKED = -9;
+const BLOCKED = -9;
 
 export class Terrain {
   constructor(rows, { color = 1, highColor = 3 } = {}) {

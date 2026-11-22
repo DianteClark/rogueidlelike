@@ -1,9 +1,9 @@
 // End-of-run screens (castle fallen / retired / era cashed in), the Era victory choice, and the share card.
 import { KINGDOMS, kingAvatar, loadMeta, saveMeta } from '../data/kingdoms.js';
 import { avatarOf, className } from '../game/heroes.js';
-import { img, load } from '../engine/assets.js';
+import { load } from '../engine/assets.js';
 import { SAVE_KEY } from '../world/world.js';
-import { REGIONS, TOTAL_STAGES } from '../data/units.js';
+import { TOTAL_STAGES } from '../data/units.js';
 
 const $ = (s) => document.getElementById(s);
 const enc = (s) => encodeURI(s);
@@ -116,4 +116,3 @@ function roundRect(g, x, y, w, h, r) {
   g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
 }
 
-export { img };

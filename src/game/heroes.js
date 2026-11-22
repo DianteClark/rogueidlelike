@@ -67,7 +67,7 @@ export function addXp(h, amount) {
 
 // Injury: falling in a fight wounds a hero (weaker, heals on its own). Falling again while wounded
 // makes them Critical: they can't fight and only recover in a Monastery bed.
-export const WOUND_TIME = 180, LIGHT_WOUND = 90, CRITICAL_TIME = 480;
+const WOUND_TIME = 180, LIGHT_WOUND = 90, CRITICAL_TIME = 480;
 export function injure(h, light = false) {
   if (h.state === 'wounded' || h.state === 'critical') { h.state = 'critical'; h.recover = CRITICAL_TIME; h.inMonastery = false; return 'critical'; }
   h.state = 'wounded'; h.recover = light ? LIGHT_WOUND : WOUND_TIME; return 'wounded';

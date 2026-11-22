@@ -1,7 +1,7 @@
 // Battle overlay: stage banner, King's Rally button with cut-in, speed toggle, retreat, results.
 import { REGIONS } from '../data/units.js';
 import { KINGDOMS, kingAvatar } from '../data/kingdoms.js';
-import { avatarOf, className } from '../game/heroes.js';
+import { avatarOf } from '../game/heroes.js';
 import { ICONS } from '../data/art.js';
 
 const $ = (s) => document.getElementById(s);
@@ -81,4 +81,3 @@ export class BattleHud {
   }
 }
 
-export { className };

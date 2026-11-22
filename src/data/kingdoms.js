@@ -65,7 +65,7 @@ export const RELICS = {
 const pct = (v) => Math.round(v * 100) + '%';
 
 // Add #unlockall to the URL once to open every kingdom for testing.
-export const UNLOCK_ALL_FOR_TESTING = typeof location !== 'undefined' && location.hash.includes('unlockall');
+const UNLOCK_ALL_FOR_TESTING = typeof location !== 'undefined' && location.hash.includes('unlockall');
 
 // Permanent starting boosts bought with Legacy between runs. cost(level) = Legacy for the next level.
 export const BOOSTS = {

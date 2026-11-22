@@ -6,7 +6,7 @@ import { newSeed } from './world/generate.js';
 import { KINGDOMS, loadMeta, kingAvatar } from './data/kingdoms.js';
 import { chooseKingdom } from './ui/kingdomSelect.js';
 import { Battle, ARENA_W, ARENA_H } from './battle/battle.js';
-import { REGIONS, TOTAL_STAGES, regionOf } from './data/units.js';
+import { TOTAL_STAGES } from './data/units.js';
 import { BattleHud } from './ui/battleHud.js';
 import { MapScreen } from './ui/mapScreen.js';
 import { RunScreens } from './ui/runScreens.js';
@@ -84,8 +84,7 @@ async function boot() {
     game.starting = true;
     document.body.classList.add('battling');
     const w = game.world, c = w.campaign;
-    const stage = typeof stageArg === 'number' ? Math.min(stageArg, c.stage) : c.stage;
-    c.region = regionOf(stage).idx;
+    const stage = Math.min(stageArg ?? c.stage, c.stage);
     const b = new Battle({
       world: w, stage,
       onEnd: (win, battle) => {
@@ -93,11 +92,10 @@ async function boot() {
         const reward = win ? w.winStage(stage, battle.team) : null;
         battle.injuries = w.applyCasualties(battle.heroes, win);
         const leave = () => { game.battle = null; bhud.hide(); hud.refresh(); w.save(); };
-        const R = { stages: TOTAL_STAGES };
         bhud.result(win, reward, battle, {
           island: leave,
           map: () => { leave(); game.openMap(); },
-          next: win && stage < R.stages ? () => { leave(); game.startBattle(stage + 1); } : null,
+          next: win && stage < TOTAL_STAGES ? () => { leave(); game.startBattle(stage + 1); } : null,
           retry: !win ? () => { leave(); game.startBattle(stage); } : null,
         });
       },

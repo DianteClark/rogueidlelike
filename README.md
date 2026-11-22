@@ -49,23 +49,40 @@ Add `#reset` to the end of the URL once to wipe your save (`#reset&seed=123` to 
 ## Project layout
 ```
 index.html, styles.css, manifest.webmanifest, sw.js   app shell + offline support
-src/main.js            boot, game loop, save/lifecycle
-src/engine/            image loading + animation, camera/touch input
-src/world/terrain.js   map parsing, autotiling, walkability, pathfinding
-src/world/world.js     the island simulation (resources, jobs, buildings, offline progress)
-src/world/pawn.js      pawn AI
-src/world/entities.js  trees, gold, sheep, buildings, effects
-src/world/generate.js  seeded random island generator (map + starting layout)
-src/ui/hud.js          resource bar, panels, toasts
-src/ui/battleHud.js    battle overlay (rally, speed, retreat, results)
-src/ui/mapScreen.js    campaign sea chart
-src/battle/battle.js   auto-battle engine
-src/battle/raid.js     island raids (landing, marching, stealing, guards, towers)
-src/game/heroes.js     hero model: summoning, stats, levels
-src/data/units.js      hero classes, enemies, campaign regions
-src/data/art.js        every sprite path/frame size in one place
-assets/packs/          the Tiny Swords packs (cleaned copies)
-tools/                 import_packs.py (re-import new pack versions), make_icon.py (app icon)
+src/main.js              boot, game loop, battle/map switching, save + app lifecycle
+
+src/engine/assets.js     image loading, sprite-strip animation, tinted copies
+src/engine/camera.js     pan / pinch zoom, tap, tap-and-hold
+
+src/data/art.js          every sprite path and frame size (incl. Beast Horde buildings)
+src/data/units.js        hero classes, enemies, monster heroes, rarities, campaign regions
+src/data/kingdoms.js     the six kingdoms, Hall of Heroes relics, Legacy boosts, meta save
+src/data/trips.js        boat-trip destinations
+
+src/world/generate.js    seeded random island generator
+src/world/terrain.js     map parsing, autotiling, walkability, pathfinding
+src/world/world.js       the island: economy, jobs, buildings, heroes, raids, sieges, run end, save/offline
+src/world/pawn.js        pawn AI (work, carry, build, repair, shelter)
+src/world/entities.js    trees, gold, sheep, buildings, rubber duck, effects
+
+src/game/heroes.js       hero model: summoning, stats, levels, injuries
+src/game/synergy.js      kingdom, colour and tribe team bonuses
+
+src/battle/battle.js     auto-battle engine (units, projectiles, hills)
+src/battle/raid.js       island raids and Blood Moon sieges
+
+src/ui/hud.js            resource bar, bottom panels (Pawns, Build, Heroes), toasts
+src/ui/kingdomSelect.js  kingdom picker + Legacy shop at the start of a run
+src/ui/mapScreen.js      campaign sea chart
+src/ui/battleHud.js      battle overlay (rally, speed, retreat, results)
+src/ui/runScreens.js     Era won, run summary, share card
+src/ui/menu.js           in-run menu (resume, shop, retire, wipe)
+
+assets/packs/            the Tiny Swords packs (cleaned copies)
+assets/ui/               9-slice UI pieces cut from the pack
+assets/fonts/            BoldPixels
+icons/                   app icons
+tools/                   import_packs.py (re-import new pack versions), make_icon.py (app icon)
 ```
 
 ## Adding new Pixel Frog content

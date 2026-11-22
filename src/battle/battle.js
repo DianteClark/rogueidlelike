@@ -5,7 +5,7 @@ import { Anim, drawFrame, frameCount, img, whiteSheet, loadAll, collectSrcs } fr
 import { Terrain } from '../world/terrain.js';
 import { rng } from '../world/generate.js';
 import { TILE, FX, TERRAIN, NATURE } from '../data/art.js';
-import { HERO_CLASSES, ENEMIES, REGIONS, stageEnemies, stageScale, regionOf } from '../data/units.js';
+import { ENEMIES, stageEnemies, stageScale, regionOf } from '../data/units.js';
 import { heroStats, heroDef, canFight } from '../game/heroes.js';
 import { teamSynergies, applyBonuses } from '../game/synergy.js';
 import { mod, KINGDOMS } from '../data/kingdoms.js';
@@ -281,8 +281,6 @@ export class Battle {
     }
     return team.length > 0;
   }
-
-  get enemyPower() { return this.enemies.reduce((s, u) => s + u.max * 0.25 + u.s.atk / u.s.rate * 6, 0); }
 
   // terrain: level of the tile under a point (0 ground, 1 plateau), and where you can stand
   levelAt(x, y) {
