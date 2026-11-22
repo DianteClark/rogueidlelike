@@ -338,3 +338,7 @@ body.mapping #topbar, body.mapping #bottombar, body.mapping #panel, body.mapping
 .mapsheet h2 { margin: 0 0 4px; font-size: 22px; }
 .mapsheet p { margin: 2px 0 8px; font-size: 15px; }
 #map-close { position: absolute; top: calc(var(--safe-top) + 14px); left: 8px; height: 48px; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 4px; }
+.chip { font-size: 12px; padding: 3px 7px; border-radius: 8px; background: rgba(59,47,42,.12); }
+.chip.on { background: #3f7fb5; color: #fff; }

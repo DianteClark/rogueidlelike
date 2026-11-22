@@ -1,5 +1,5 @@
 // Hero model: creation (summoning), stats, levels, power.
-import { HERO_CLASSES, RARITIES, rarity } from '../data/units.js';
+import { HERO_CLASSES, MONSTER_HEROES, RARITIES, rarity, rarityRank } from '../data/units.js';
 import { COLORS } from '../data/art.js';
 import { KINGDOMS } from '../data/kingdoms.js';
 
@@ -22,17 +22,24 @@ function weighted(items, w = (x) => x.weight) {
 
 const uid = () => (globalThis.crypto?.randomUUID ? crypto.randomUUID().slice(0, 13) : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8));
 
-export function makeHero({ cls, color, rarityId, level = 1 } = {}, kingdom = 'blue') {
-  const clsId = cls || weighted(Object.entries(HERO_CLASSES), ([, d]) => d.weight)[0];
+export const heroDef = (cls) => HERO_CLASSES[cls] || MONSTER_HEROES[cls];
+
+// pool: list of class ids that can be summoned right now
+export function makeHero({ cls, color, rarityId, level = 1, pool } = {}, kingdom = 'blue') {
+  const ids = pool && pool.length ? pool : Object.keys(HERO_CLASSES);
+  const clsId = cls || weighted(ids.map((id) => [id, heroDef(id)]), ([, d]) => d.weight)[0];
+  const def = heroDef(clsId);
   const home = KINGDOMS[kingdom]?.color || 'Blue';
-  const col = color || (Math.random() < 0.5 ? home : COLORS[Math.floor(Math.random() * COLORS.length)]);
-  const rar = rarityId || weighted(RARITIES).id;
+  const col = def.monster ? null : color || (Math.random() < 0.5 ? home : COLORS[Math.floor(Math.random() * COLORS.length)]);
+  let rar = rarityId || weighted(RARITIES.filter((r) => r.weight > 0)).id;
+  if (def.minRarity && rarityRank(rar) < rarityRank(def.minRarity)) rar = def.minRarity;
+  if (def.boss && !rarityId && Math.random() < 0.2) rar = 'mythic';
   const name = FIRST[Math.floor(Math.random() * FIRST.length)] + LAST[Math.floor(Math.random() * LAST.length)];
   return { id: 'h-' + uid(), cls: clsId, color: col, rarity: rar, level, xp: 0, stars: 1, name, state: 'healthy' };
 }
 
 export function heroStats(h) {
-  const c = HERO_CLASSES[h.cls], r = rarity(h.rarity);
+  const c = heroDef(h.cls), r = rarity(h.rarity);
   const growth = r.mul * (1 + 0.1 * (h.level - 1)) * (1 + 0.2 * (h.stars - 1));
   const s = c.stats;
   return {
@@ -57,5 +64,6 @@ export function addXp(h, amount) {
   return ups;
 }
 
-export const className = (h) => HERO_CLASSES[h.cls].name;
-export const avatarOf = (h) => HERO_CLASSES[h.cls].avatar(h.color);
+export const className = (h) => heroDef(h.cls).name;
+export const avatarOf = (h) => heroDef(h.cls).avatar(h.color);
+export const groupName = (h) => (heroDef(h.cls).monster ? heroDef(h.cls).tribe : h.color);

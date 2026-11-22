@@ -6,7 +6,8 @@ import { Terrain } from '../world/terrain.js';
 import { rng } from '../world/generate.js';
 import { TILE, FX, TERRAIN, NATURE } from '../data/art.js';
 import { HERO_CLASSES, ENEMIES, REGIONS, stageEnemies, stageScale } from '../data/units.js';
-import { heroStats } from '../game/heroes.js';
+import { heroStats, heroDef } from '../game/heroes.js';
+import { teamSynergies, applyBonuses } from '../game/synergy.js';
 import { mod } from '../data/kingdoms.js';
 
 const T = TILE;
@@ -112,7 +113,7 @@ export class Unit {
     return best;
   }
 
-  rateMul() { return this.frenzy && this.hp < this.max / 2 ? 1.45 : 1; }
+  rateMul() { return (1 + (this.haste || 0)) * (this.frenzy && this.hp < this.max / 2 ? 1 + this.frenzy : 1); }
 
   strike() {
     const t = this.target; if (!t || t.dead) return;
@@ -217,27 +218,23 @@ export class Battle {
     this.team = team;
     const enemyIds = stageEnemies(this.regionIdx, this.stage);
     const srcs = collectSrcs({ fx: FX, t: [TERRAIN.tilemap(this.region.terrain), TERRAIN.foam, TERRAIN.shadow], d: [NATURE.bushes, NATURE.rocks] });
-    for (const h of team) { const c = HERO_CLASSES[h.cls]; collectSrcs(c.art(h.color), srcs); if (c.projectile) srcs.add(c.projectile.src); }
+    for (const h of team) { const c = heroDef(h.cls); collectSrcs(c.art(h.color), srcs); if (c.projectile) srcs.add(c.projectile.src); }
     for (const id of enemyIds) { const e = ENEMIES[id]; collectSrcs(e.art, srcs); if (e.projectile) srcs.add(e.projectile.src); }
     await loadAll(srcs);
     this.terrain.buildStatic();
 
     // heroes: tanks in front, damage behind, ranged and support at the back
     const order = { Tank: 0, Melee: 1, Ranged: 2, Support: 3 };
-    team.sort((a, b) => order[HERO_CLASSES[a.cls].role] - order[HERO_CLASSES[b.cls].role]);
+    team.sort((a, b) => order[heroDef(a.cls).role] - order[heroDef(b.cls).role]);
     const rows = { Tank: 11.4, Melee: 12, Ranged: 13.2, Support: 13.4 };
     const dmg = mod(k, 'heroDamage');
+    this.synergy = teamSynergies(team, k);
     team.forEach((h, i) => {
-      const c = HERO_CLASSES[h.cls], st = heroStats(h);
+      const c = heroDef(h.cls), st = heroStats(h);
       st.atk = Math.round(st.atk * dmg);
       const x = (1.8 + (i + 0.5) * ((ARENA_W - 3.6) / team.length)) * T;
       const u = new Unit(this, 'hero', h.cls, c.art(h.color), st, x, rows[c.role] * T, { projectile: c.projectile, hero: h });
-      // kingdom combat passives
-      if (k === 'blue') u.shield = u.max * 0.15;
-      if (k === 'red') u.frenzy = true;
-      if (k === 'yellow') u.crit = 0.2;
-      if (k === 'purple') u.regen = 0.012;
-      if (k === 'black') u.lifesteal = 0.15;
+      applyBonuses(u, h, this.synergy, k);
       this.heroes.push(u);
     });
 
@@ -282,6 +279,7 @@ export class Battle {
 
   kill(u) {
     u.dead = true; u.hp = 0; u.anim.t = 0;
+    if (u.side === 'enemy') this.world.markDefeated?.(u.kind);
     this.fx(u.boss ? FX.explosion : FX.dustBig, u.x, u.y);
   }
 

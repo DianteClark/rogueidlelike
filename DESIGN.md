@@ -51,7 +51,9 @@ pick is a strategy, not just a color.
 Kingdoms are defined in `src/data/kingdoms.js`. Island passives and drawbacks that touch existing systems
 (build costs, gold, food, work speed, idle cap) are live now; combat and raid ones switch on as those systems land.
 
-**Team bonus:** heroes of any color can be recruited, but same-color teams trigger a stacking bonus (2/3/5 heroes).
+**Team bonus:** every hero gets the kingdom passive. 2/3/4/5 heroes of the same colour (or monster tribe) unlock tiers I–IV of that colour's effect for those heroes (Blue Shieldwall, Red Bloodrage, Yellow Sunstrike, Purple Veilmend, Black Grave Hunger; tribes: Goblin Swarm, Brute Thick Hide, Forest Wild Growth, Sea Tidecaller, Undead Unending). Heroes matching the kingdom colour get +10% health and attack. Defined in `src/game/synergy.js`.
+
+**Monster heroes:** beating a monster type unlocks it in the summon pool. Monsters are at least Rare; bosses are Legendary with a 20% chance of the new **Mythic** tier.
 
 **Counter loop:** Blue > Red > Yellow > Purple > Black > Blue (+25% damage against the color it beats).
 

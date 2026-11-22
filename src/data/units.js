@@ -89,7 +89,9 @@ export const RARITIES = [
   { id: 'rare', name: 'Rare', weight: 28, mul: 1.3, color: '#5aa6e0' },
   { id: 'epic', name: 'Epic', weight: 8.5, mul: 1.7, color: '#b46be0' },
   { id: 'legendary', name: 'Legendary', weight: 1.5, mul: 2.2, color: '#f2c14e' },
+  { id: 'mythic', name: 'Mythic', weight: 0, mul: 2.8, color: '#ff6b5a' }, // bosses only
 ];
+export const rarityRank = (id) => Math.max(0, RARITIES.findIndex((r) => r.id === id));
 export const rarity = (id) => RARITIES.find((r) => r.id === id) || RARITIES[0];
 
 // ---------------------------------------------------------------- enemies
@@ -134,6 +136,21 @@ export const ENEMIES = {
     avatar: E('Troll', 'Troll_Avatar.png'),
   },
 };
+
+// Monsters can join you as heroes once you've beaten them in battle.
+// Regular monsters are at least Rare; bosses are Legendary, sometimes Mythic.
+export const MONSTER_HEROES = Object.fromEntries(Object.entries(ENEMIES).map(([id, e]) => {
+  const s = e.stats;
+  const stats = e.boss
+    ? { ...s, hp: Math.round(s.hp * 0.34), atk: Math.round(s.atk * 0.62), rate: Math.min(s.rate, 2.0), speed: Math.max(s.speed, 55) }
+    : { ...s, hp: Math.round(s.hp * 1.1), atk: Math.round(s.atk * 1.05) };
+  const role = s.range > 2 ? 'Ranged' : stats.hp >= 105 ? 'Tank' : 'Melee';
+  return [id, {
+    name: e.name, role, monster: true, tribe: e.tribe, boss: !!e.boss, weight: e.boss ? 1 : 5,
+    minRarity: e.boss ? 'legendary' : 'rare', stats, projectile: e.projectile,
+    art: () => e.art, avatar: () => e.avatar,
+  }];
+}));
 
 // Campaign regions. Each stage lists enemy types; the generator scales stats by stage number.
 export const REGIONS = [

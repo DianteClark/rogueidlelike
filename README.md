@@ -28,6 +28,8 @@ Add `#reset` to the end of the URL once to wipe your save (`#reset&seed=123` to 
 - Raids (Gentle tier): after your first win, goblins land on a beach every 6–10 min with a 90s warning. Assign up to 3 Guard heroes, build Towers that shoot arrows, pawns shelter in the castle; raiders that reach the castle steal resources. Raids while you're away are resolved by defense vs raid strength
 - The rubber duck: tap it when it drifts by for treasure; a rare golden duck gives gold and a free recruit
 - Campaign map: a sea chart of stage islands; after each fight choose Next stage, Map or Island (Retry after a loss)
+- Team bonuses: 2/3/4/5 heroes of one colour (or one monster tribe) unlock tiered bonuses; heroes matching your kingdom colour get +10% health and attack
+- Monster heroes: every monster you beat can join your summons (Rare or better); bosses are Legendary, sometimes Mythic
 - Pan / pinch-zoom camera, tap buildings and pawns
 - Autosave and "While you were away" offline earnings (up to 12h)
 

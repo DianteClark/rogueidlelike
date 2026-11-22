@@ -3,7 +3,8 @@
 import { Unit, Projectile } from './battle.js';
 import { Anim, loadAll, collectSrcs } from '../engine/assets.js';
 import { ENEMIES, HERO_CLASSES, REGIONS, stageScale } from '../data/units.js';
-import { heroStats } from '../game/heroes.js';
+import { heroStats, heroDef } from '../game/heroes.js';
+import { teamSynergies, applyBonuses } from '../game/synergy.js';
 import { FX, TILE, FREE } from '../data/art.js';
 import { mod } from '../data/kingdoms.js';
 
@@ -36,7 +37,7 @@ export class Raid {
   async prepare() {
     const w = this.world, srcs = new Set();
     for (const id of this.plan.enemies) { collectSrcs(ENEMIES[id].art, srcs); if (ENEMIES[id].projectile) srcs.add(ENEMIES[id].projectile.src); }
-    for (const h of w.guardHeroes) { const c = HERO_CLASSES[h.cls]; collectSrcs(c.art(h.color), srcs); if (c.projectile) srcs.add(c.projectile.src); }
+    for (const h of w.guardHeroes) { const c = heroDef(h.cls); collectSrcs(c.art(h.color), srcs); if (c.projectile) srcs.add(c.projectile.src); }
     srcs.add(`${FREE}Units/Blue Units/Archer/Arrow.png`);
     collectSrcs(FX, srcs);
     await loadAll(srcs);
@@ -69,11 +70,12 @@ export class Raid {
 
     // guard heroes come out of the castle
     const k = w.kingdom;
+    const syn = teamSynergies(w.guardHeroes, k);
     w.guardHeroes.forEach((h, i) => {
-      const c = HERO_CLASSES[h.cls], st = heroStats(h);
+      const c = heroDef(h.cls), st = heroStats(h);
       st.atk = Math.round(st.atk * mod(k, 'heroDamage'));
       const u = new Unit(this, 'hero', h.cls, c.art(h.color), st, (door.x + 0.5 + (i - 1) * 0.6) * T, (door.y + 0.9) * T, { projectile: c.projectile, hero: h });
-      if (k === 'blue') u.shield = u.max * 0.15;
+      applyBonuses(u, h, syn, k);
       this.heroes.push(u);
     });
     // towers shoot arrows (an invisible archer on top of each finished tower)
@@ -154,6 +156,7 @@ export class Raid {
     this.text(String(Math.round(dmg)), to.x, to.y - to.head, '#fff');
     if (to.hp <= 0) {
       to.dead = true; to.hp = 0; to.anim.t = 0;
+      if (to.side === 'enemy') this.world.markDefeated?.(to.kind);
       this.fx(FX.dustBig, to.x, to.y);
       if (to.side === 'enemy' && to.loot) for (const [k, n] of Object.entries(to.loot)) { this.world.res[k] += n; this.stolen[k] -= n; }
       if (to.side === 'enemy') { const g = 4 + this.plan.level; this.world.res.gold += g; this.bounty = (this.bounty || 0) + g; this.text('+' + g + ' gold', to.x, to.y - to.head - 24, '#ffd24a'); }

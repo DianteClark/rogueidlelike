@@ -1,7 +1,8 @@
 // DOM overlay: resource bar, bottom nav, bottom-sheet panels, toasts.
 import { BUILDINGS, ICONS, buildingSrc, WAR, FREE } from '../data/art.js';
 import { JOBS } from '../world/pawn.js';
-import { heroStats, power, levelCost, className, avatarOf, TEAM_SIZE, MAX_LEVEL, xpToLevel } from '../game/heroes.js';
+import { heroStats, power, levelCost, className, avatarOf, groupName, TEAM_SIZE, MAX_LEVEL, xpToLevel } from '../game/heroes.js';
+import { teamSynergies } from '../game/synergy.js';
 import { rarity, REGIONS, ENEMIES, stageEnemies } from '../data/units.js';
 
 const $ = (s) => document.querySelector(s);
@@ -171,6 +172,7 @@ export class Hud {
     return `<h2>Heroes ${w.heroes.length}/${w.rosterCap}</h2>
       <p>Campaign team · power ${teamPower}</p>
       <div class="teamrow">${slots}</div>
+      ${this.synergyHtml(w.team.map((id) => w.hero(id)).filter(Boolean))}
       <p>Island guards · defense ${w.defensePower}${nextRaid}</p>
       <div class="teamrow" style="grid-template-columns:repeat(5,1fr)">${guards}</div>
       <div class="summonbar">
@@ -180,13 +182,22 @@ export class Hud {
       <div class="herogrid">${cards || '<p class="muted">No heroes yet. Summon your first!</p>'}</div>`;
   }
 
+  synergyHtml(heroes) {
+    const syn = teamSynergies(heroes, this.world.kingdom);
+    const chips = syn.active.filter((s) => s.count >= 1).map((s) => `<span class="chip ${s.tier ? 'on' : ''}" title="${s.text}">
+      ${s.id} ×${s.count}${s.tier ? ` · ${s.name}${' I II III IV'.split(' ')[s.tier] ? ' ' + ['', 'I', 'II', 'III', 'IV'][s.tier] : ''}` : ''}</span>`).join('');
+    const detail = syn.active.filter((s) => s.tier).map((s) => `${s.name}: ${s.text}`).join(' · ');
+    return `<div class="chips">${chips}${syn.homeCount ? `<span class="chip on">Home colour ×${syn.homeCount}</span>` : ''}</div>
+      ${detail ? `<p class="muted" style="font-size:13px">${detail}${syn.homeCount ? ' · Home colour: +10% health & attack' : ''}</p>` : ''}`;
+  }
+
   panel_hero() {
     const w = this.world, h = w.hero(this.heroId);
     if (!h) return this.panel_heroes();
     const s = heroStats(h), r = rarity(h.rarity), inTeam = w.team.includes(h.id);
     const cost = levelCost(h);
     return `<div class="herohead"><img src="${enc(avatarOf(h))}" alt="">
-        <div><h2>${h.name}</h2><div class="rar" style="color:${r.color};text-shadow:0 1px 0 #3b2f2a">${r.name} ${h.color} ${className(h)}</div>
+        <div><h2>${h.name}</h2><div class="rar" style="color:${r.color};text-shadow:0 1px 0 #3b2f2a">${r.name} ${groupName(h)} ${className(h)}</div>
         <div>Level ${h.level} · Power ${power(h)}</div><div class="muted" style="font-size:13px">XP ${h.xp}/${xpToLevel(h)}</div></div></div>
       <div class="stats">
         <div>Health <b>${s.hp}</b></div><div>${s.heal ? 'Heal' : 'Attack'} <b>${s.heal || s.atk}</b></div>
@@ -209,7 +220,7 @@ export class Hud {
     const el = document.getElementById('reveal'), r = rarity(h.rarity);
     el.style.setProperty('--rc', r.color);
     document.getElementById('reveal-img').src = enc(avatarOf(h));
-    document.getElementById('reveal-text').innerHTML = `${h.name}<small style="color:${r.color}">${r.name} ${h.color} ${className(h)}</small>`;
+    document.getElementById('reveal-text').innerHTML = `${h.name}<small style="color:${r.color}">${r.name} ${groupName(h)} ${className(h)}</small>`;
     el.classList.remove('hidden');
     el.onclick = () => el.classList.add('hidden');
   }

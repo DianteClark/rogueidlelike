@@ -7,7 +7,7 @@ import { BUILDINGS, NATURE, FX, ICONS, TILE } from '../data/art.js';
 import { img } from '../engine/assets.js';
 import { KINGDOMS, mod } from '../data/kingdoms.js';
 import { makeHero, SUMMON_COST, FREE_SUMMONS, TEAM_SIZE, BASE_ROSTER, levelCost, MAX_LEVEL, addXp, xpToLevel } from '../game/heroes.js';
-import { REGIONS } from '../data/units.js';
+import { REGIONS, HERO_CLASSES, MONSTER_HEROES, ENEMIES } from '../data/units.js';
 import { Raid, planRaid, raidPower } from '../battle/raid.js';
 import { power } from '../game/heroes.js';
 
@@ -34,7 +34,7 @@ export class World {
     this.decor = []; this.effects = [];
     this.time = 0; this.hungry = false; this.eatT = 0; this.arriveT = 0; this.sheepT = 0;
     this.placing = null;
-    this.heroes = []; this.team = []; this.guards = []; this.freeSummons = FREE_SUMMONS;
+    this.heroes = []; this.team = []; this.guards = []; this.freeSummons = FREE_SUMMONS; this.defeated = [];
     this.raid = null; this.raidAt = null; this.raidPlan = null;
     this.campaign = { region: 0, stage: 1, best: 0 };
     this.clouds = Array.from({ length: 3 }, (_, i) => ({ i: (i * 3) % 8, x: Math.random() * 2000 - 600, y: Math.random() * 1600, s: 7 + Math.random() * 6 }));
@@ -68,6 +68,7 @@ export class World {
       this.guards = (save.guards ?? []).filter((id) => this.heroes.some((h) => h.id === id) && !this.team.includes(id));
       if (save.raidIn != null) { this.raidAt = save.raidIn; this.raidPlan = save.raidPlan; }
       this.freeSummons = save.freeSummons ?? 0;
+      this.defeated = save.defeated ?? [];
       this.campaign = { ...this.campaign, ...save.campaign };
     }
     for (const b of buildings) this.addBuilding(new Building(b.type, b.x, b.y, { progress: b.progress ?? 1, variant: b.variant ?? 0, color: this.color }));
@@ -193,7 +194,7 @@ export class World {
     if (this.freeSummons > 0) this.freeSummons--;
     else if (this.canAfford(this.summonCost)) this.pay(this.summonCost);
     else { this.events.toast?.('Not enough gold'); return null; }
-    const h = makeHero({}, this.kingdom);
+    const h = makeHero({ pool: this.summonPool }, this.kingdom);
     this.heroes.push(h);
     if (this.team.length < TEAM_SIZE) this.team.push(h.id);
     this.events.changed?.();
@@ -201,6 +202,20 @@ export class World {
   }
 
   hero(id) { return this.heroes.find((h) => h.id === id); }
+
+  // Beating a monster for the first time lets it join your summons.
+  markDefeated(id) {
+    if (!MONSTER_HEROES[id] || this.defeated.includes(id)) return;
+    this.defeated.push(id);
+    this.events.toast?.(`${ENEMIES[id].name}s can now join your heroes!`, 3000);
+  }
+
+  get summonPool() {
+    const k = KINGDOMS[this.kingdom];
+    const monsters = [...new Set([...(k.monsterPool || []), ...this.defeated])].filter((id) => MONSTER_HEROES[id]);
+    const humans = k.humansAfter == null || this.campaign.best >= k.humansAfter ? Object.keys(HERO_CLASSES) : [];
+    return [...humans, ...monsters];
+  }
 
   get guardHeroes() { return this.guards.map((id) => this.hero(id)).filter(Boolean); }
   get guardCap() { return GUARD_CAP; }
@@ -510,7 +525,7 @@ export class World {
       trees: this.trees.map((t) => [t.stock, Math.round(t.regrow)]),
       stones: this.stones.map((s) => [s.stock, Math.round(s.regrow)]),
       sheep: this.sheep.length,
-      heroes: this.heroes, team: this.team, guards: this.guards, freeSummons: this.freeSummons, campaign: this.campaign,
+      heroes: this.heroes, team: this.team, guards: this.guards, freeSummons: this.freeSummons, campaign: this.campaign, defeated: this.defeated,
       raidIn: this.raidAt == null ? null : Math.max(30, this.raidAt - this.time), raidPlan: this.raidPlan,
     };
   }
