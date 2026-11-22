@@ -221,7 +221,7 @@ Spend between runs on:
 
 1. ✅ **Home island:** autotiled terrain with elevation, camera, pawns gathering wood/gold/meat, HUD, save.
 2. ✅ Building placement (houses); house cap; pawn arrival. Random island per run. Kingdom select. *(upgrades: later)*
-3. ✅ Battle engine + first campaign region (Goblin Coast). *(terrain bonuses on the battle board: next)*
+3. ✅ Battle engine + first campaign region (Goblin Coast), with hills: high ground +25% damage and extra range, stairs as the only way up.
 4. ✅ Heroes: roster, summoning, levels, team screen.
 5. ✅ Raids: Gentle tier, guard slots, towers. *(walls, more tribes: next)*
 6. ✅ Idle rewards and "While you were away" screen.

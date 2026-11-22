@@ -14,15 +14,24 @@ const T = TILE;
 export const ARENA_W = 10, ARENA_H = 16;
 const RALLY_CHARGE = 14; // seconds to fill the King's meter
 
-function arenaMap(seed) {
+// Arena layout. With a hill, the enemy side has a plateau (rows 2-4) whose cliff faces your heroes;
+// the only way up is a staircase on one side.
+function arenaMap(seed, hill) {
   const R = rng(seed);
+  const left = R() < 0.5;
+  const px0 = left ? 3 : 2, px1 = left ? 7 : 6;           // plateau columns
+  const sx = left ? px0 - 1 : px1 + 1;                     // stair column
   const rows = [];
   for (let y = 0; y < ARENA_H; y++) {
     let row = '';
     for (let x = 0; x < ARENA_W; x++) {
       const edge = x === 0 || y === 0 || x === ARENA_W - 1 || y === ARENA_H - 1;
       const nearEdge = x === 1 || y === 1 || x === ARENA_W - 2 || y === ARENA_H - 2;
-      row += edge || (nearEdge && R() < 0.3) ? '.' : 'g';
+      let c = edge || (nearEdge && R() < 0.3 && !(hill && y <= 6)) ? '.' : 'g';
+      if (hill && y >= 2 && y <= 4 && x >= px0 && x <= px1) c = 'h';
+      if (hill && y === 4 && x === sx) c = 's';
+      if (hill && y >= 1 && y <= 6 && (x === 1 || x === ARENA_W - 2)) c = 'g';
+      row += c;
     }
     rows.push(row);
   }
@@ -77,7 +86,13 @@ export class Unit {
     if (!t) { this.anim.set(this.art.idle); return; }
     const dx = t.x - this.x, dy = t.y - this.y, d = Math.hypot(dx, dy);
     if (Math.abs(dx) > 4) this.flip = dx < 0;
-    const reach = (healer || !this.s.heal ? this.s.range : 1) * T * 0.75 + 26;
+    const hi = this.b.levelAt?.(this.x, this.y) > 0 && this.s.range > 2 ? 1.5 : 0; // high ground: ranged units see farther
+    const reach = ((healer || !this.s.heal ? this.s.range : 1) + hi) * T * 0.75 + 26;
+    const wp = this.b.waypoint?.(this, t);
+    if (wp && !(this.s.range > 2 && d <= reach)) {
+      const wx = wp.x - this.x, wy = wp.y - this.y, wd = Math.hypot(wx, wy) || 1;
+      this.move(wx / wd, wy / wd, dt); return;
+    }
     if (d > reach) { this.move(dx / d, dy / d, dt); return; }
     if (this.cool <= 0) {
       this.state = 'attack'; this.hitDone = false; this.anim.def = null;
@@ -97,14 +112,9 @@ export class Unit {
       if (od > 0 && od < 50) { vx += ox / od * 70; vy += oy / od * 70; }
     }
     const nx2 = this.x + vx * dt, ny2 = this.y + vy * dt;
-    if (this.b.canStand) {
-      if (this.b.canStand(nx2, ny2)) { this.x = nx2; this.y = ny2; }
-      else if (this.b.canStand(nx2, this.y)) this.x = nx2;
-      else if (this.b.canStand(this.x, ny2)) this.y = ny2;
-      return;
-    }
-    this.x = Math.max(1.6 * T, Math.min((ARENA_W - 1.6) * T, nx2));
-    this.y = Math.max(2.2 * T, Math.min((ARENA_H - 1.4) * T, ny2));
+    if (this.b.canStand(nx2, ny2, this)) { this.x = nx2; this.y = ny2; }
+    else if (this.b.canStand(nx2, this.y, this)) this.x = nx2;
+    else if (this.b.canStand(this.x, ny2, this)) this.y = ny2;
   }
 
   nearest(list) {
@@ -213,7 +223,9 @@ export class Battle {
   constructor({ world, regionIdx, stage, onEnd }) {
     this.world = world; this.regionIdx = regionIdx; this.stage = stage; this.onEnd = onEnd;
     this.region = REGIONS[regionIdx];
-    this.terrain = new Terrain(arenaMap(stage * 977 + 13), { color: this.region.terrain, highColor: 3 });
+    this.hill = stage % 2 === 0 && stage < REGIONS[regionIdx].stages;
+    this.terrain = new Terrain(arenaMap(stage * 977 + 13, this.hill), { color: this.region.terrain, highColor: 3 });
+    if (this.hill) for (let y = 0; y < ARENA_H; y++) for (let x = 0; x < ARENA_W; x++) if (this.terrain.stair[y][x] === 1) this.stairTop = { x, y };
     this.time = 0; this.speed = 1; this.rally = 0; this.rallyBuff = 0; this.over = null; this.shake = 0;
     this.heroes = []; this.enemies = []; this.projectiles = []; this.effects = []; this.texts = [];
     this.decor = [];
@@ -254,7 +266,9 @@ export class Battle {
       const st = { ...e.stats, hp: Math.round(e.stats.hp * sc), atk: Math.round(e.stats.atk * sc), def: Math.round(e.stats.def * sc) };
       const cols = Math.min(enemyIds.length, 4), row = Math.floor(i / cols);
       const x = e.boss ? (ARENA_W / 2) * T : (1.8 + ((i % cols) + 0.5) * ((ARENA_W - 3.6) / cols)) * T;
-      const y = e.boss ? 3.6 * T : (3.2 + row * 1.2) * T;
+      let y = e.boss ? 3.6 * T : (3.2 + row * 1.2) * T;
+      // with a hill, ranged foes hold the high ground and melee foes wait below the cliff
+      if (this.hill && !e.boss) y = (e.stats.range > 2 ? 3.4 : 6.9 + row * 0.6) * T;
       this.enemies.push(new Unit(this, 'enemy', id, e.art, st, x, y, { projectile: e.projectile, boss: e.boss }));
     });
 
@@ -262,16 +276,43 @@ export class Battle {
     const R = rng(this.stage * 31 + 7);
     for (let i = 0; i < 5; i++) {
       const x = R() < 0.5 ? 1 : ARENA_W - 2, y = 2 + Math.floor(R() * (ARENA_H - 4));
-      if (this.terrain.land[y][x]) this.decor.push({ def: R() < 0.6 ? NATURE.bushes[i % 4] : NATURE.rocks[i % 4], x: x * T + 32, y: y * T + 56, anim: new Anim(R() < 0.6 ? NATURE.bushes[i % 4] : NATURE.rocks[i % 4], 8) });
+      if (this.terrain.land[y][x] && !(this.hill && y <= 6)) this.decor.push({ def: R() < 0.6 ? NATURE.bushes[i % 4] : NATURE.rocks[i % 4], x: x * T + 32, y: y * T + 56, anim: new Anim(R() < 0.6 ? NATURE.bushes[i % 4] : NATURE.rocks[i % 4], 8) });
     }
     return team.length > 0;
   }
 
   get enemyPower() { return this.enemies.reduce((s, u) => s + u.max * 0.25 + u.s.atk / u.s.rate * 6, 0); }
 
+  // terrain: level of the tile under a point (0 ground, 1 plateau), and where you can stand
+  levelAt(x, y) {
+    if (!this.hill) return 0;
+    const tx = Math.floor(x / T), ty = Math.floor((y - 4) / T);
+    return this.terrain.inside(tx, ty) ? this.terrain.level[ty][tx] : -9;
+  }
+  canStand(x, y, u) {
+    if (!this.hill) return x > 1.4 * T && x < (ARENA_W - 1.4) * T && y > 2 * T && y < (ARENA_H - 1.2) * T;
+    const tr = this.terrain, tx = Math.floor(x / T), ty = Math.floor((y - 4) / T);
+    if (!tr.inside(tx, ty) || tr.level[ty][tx] < 0) return false;
+    if (!u) return true;
+    const cx = Math.floor(u.x / T), cy = Math.floor((u.y - 4) / T);
+    if (!tr.inside(cx, cy) || tr.level[cy][cx] === tr.level[ty][tx]) return true;
+    return !!(tr.stair[ty][tx] || tr.stair[cy][cx]);   // only the stairs change level
+  }
+  // when a unit's target is on another level, walk to the stairs first
+  waypoint(u, t) {
+    if (!this.hill || !t) return null;
+    const a = this.levelAt(u.x, u.y), b = this.levelAt(t.x, t.y);
+    if (a === b || a < 0 || b < 0) return null;
+    const s = this.stairTop, top = { x: (s.x + 0.5) * T, y: (s.y + 0.7) * T }, foot = { x: (s.x + 0.5) * T, y: (s.y + 1.7) * T };
+    const onStairs = Math.abs(u.x - top.x) < T * 0.5 && u.y > top.y - T * 0.6 && u.y < foot.y + T * 0.3;
+    if (onStairs) return a === 0 ? top : foot;
+    return a === 0 ? foot : top;
+  }
+
   damage(from, to) {
     if (to.dead) return;
     let dmg = from.s.atk * (0.9 + Math.random() * 0.2);
+    if (to.side !== 'castle' && this.levelAt(from.x, from.y) > this.levelAt(to.x, to.y)) dmg *= 1.25; // high ground
     let crit = false;
     if (Math.random() < 0.05 + (from.crit || 0)) { dmg *= 1.8; crit = true; }
     if (from.side === 'hero' && this.rallyBuff > 0) dmg *= 1.4;
