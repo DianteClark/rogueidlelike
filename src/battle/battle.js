@@ -239,7 +239,7 @@ export class Battle {
     this.ringColor = KINGDOMS[k]?.hex;
     team.forEach((h, i) => {
       const c = heroDef(h.cls), st = heroStats(h);
-      st.atk = Math.round(st.atk * dmg);
+      st.atk = Math.round(st.atk * dmg * (1 + (w.relicBonus || 0)));
       const x = (1.8 + (i + 0.5) * ((ARENA_W - 3.6) / team.length)) * T;
       const u = new Unit(this, 'hero', h.cls, c.art(h.color), st, x, rows[c.role] * T, { projectile: c.projectile, hero: h });
       applyBonuses(u, h, this.synergy, k);

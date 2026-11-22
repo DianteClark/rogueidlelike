@@ -1,5 +1,5 @@
 // Things that live on the island: resource nodes, buildings, sheep, pawns, effects.
-import { Anim, drawFrame, img } from '../engine/assets.js';
+import { Anim, drawFrame, img, tintSheet } from '../engine/assets.js';
 import { NATURE, FX, BUILDINGS, buildingArt, TILE, pawnArt } from '../data/art.js';
 
 const T = TILE;
@@ -78,6 +78,7 @@ export class Building {
     return { sx: f * fw, fw };
   }
   get done() { return this.progress >= 1; }
+  get working() { return this.done && !this.wrecked; }
   get door() { return { x: this.x + Math.floor(this.w / 2), y: this.y + 1 }; }
   cells() {
     const out = [];
@@ -97,7 +98,11 @@ export class Building {
     const { sx, fw } = this.frameRect(im), h = im.height;
     const left = Math.round((this.x + this.w / 2) * T - fw / 2);
     const bottom = (this.y + 1) * T + this.sink;
-    if (this.done) { ctx.drawImage(im, sx, 0, fw, h, left, bottom - h, fw, h); return; }
+    if (this.done) {
+      ctx.drawImage(im, sx, 0, fw, h, left, bottom - h, fw, h);
+      if (this.wrecked) { const d = tintSheet(this.src, '#1a1412'); if (d) { ctx.globalAlpha = 0.5; ctx.drawImage(d, sx, 0, fw, h, left, bottom - h, fw, h); ctx.globalAlpha = 1; } }
+      return;
+    }
     // under construction: faded silhouette, with the built part revealed from the bottom up
     ctx.globalAlpha = 0.35; ctx.drawImage(im, sx, 0, fw, h, left, bottom - h, fw, h); ctx.globalAlpha = 1;
     const shown = Math.floor(h * this.progress);
@@ -105,6 +110,16 @@ export class Building {
   }
   // progress bar for buildings under construction
   drawOver(ctx) {
+    if (this.wrecked) {
+      const t = performance.now() / 100, bx = (this.x + this.w / 2) * T, by = (this.y + 1) * T;
+      drawFrame(ctx, FX.fire, Math.floor(t), bx - 30, by - 20);
+      drawFrame(ctx, FX.fire, Math.floor(t) + 3, bx + 26, by - 44);
+      if (this.repair) {
+        ctx.fillStyle = 'rgba(30,30,40,.6)'; ctx.fillRect(bx - 40, by - 110, 80, 10);
+        ctx.fillStyle = '#8fd16a'; ctx.fillRect(bx - 38, by - 108, 76 * this.repair, 6);
+      }
+      return;
+    }
     if (this.done) return;
     const im = img(this.src); if (!im) return;
     const x = (this.x + this.w / 2) * T - 40, y = (this.y + 1) * T + this.sink - im.height - 14;

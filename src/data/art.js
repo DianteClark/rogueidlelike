@@ -68,6 +68,7 @@ export const FX = {
   dustBig: { src: `${FREE}Particle FX/Dust_02.png`, fw: 64, fh: 64, ax: 32, ay: 48 },
   explosion: { src: `${FREE}Particle FX/Explosion_01.png`, fw: 192, fh: 192, ax: 96, ay: 120 },
   splash: { src: `${FREE}Particle FX/Water Splash.png`, fw: 192, fh: 192, ax: 96, ay: 120 },
+  fire: { src: `${FREE}Particle FX/Fire_01.png`, fw: 64, fh: 64, ax: 32, ay: 58 },
 };
 
 // Buildings: footprint in tiles (w × h, counted up from the bottom row), sprite anchored bottom-center.

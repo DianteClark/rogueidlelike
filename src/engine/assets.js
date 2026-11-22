@@ -79,15 +79,17 @@ export class Anim {
 }
 
 // A pure-white copy of a sprite sheet, used to flash units when they take a hit.
-const whiteCache = new Map();
-export function whiteSheet(src) {
-  if (whiteCache.has(src)) return whiteCache.get(src);
+const tintCache = new Map();
+export function tintSheet(src, color) {
+  const key = src + '|' + color;
+  if (tintCache.has(key)) return tintCache.get(key);
   const im = img(src); if (!im || !im.complete) return null;
   const c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
   const g = c.getContext('2d');
   g.drawImage(im, 0, 0);
   g.globalCompositeOperation = 'source-in';
-  g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
-  whiteCache.set(src, c);
+  g.fillStyle = color; g.fillRect(0, 0, c.width, c.height);
+  tintCache.set(key, c);
   return c;
 }
+export const whiteSheet = (src) => tintSheet(src, '#fff');

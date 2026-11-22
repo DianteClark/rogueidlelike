@@ -35,6 +35,7 @@ Add `#reset` to the end of the URL once to wipe your save (`#reset&seed=123` to 
 - Units in battle stand on a coloured ring: yours vs the enemy's
 - Tap and hold any building (castle included) to pick it up, drag it (green = fits, red = blocked) and let go
 - Injuries: heroes who fall get Wounded (weaker, heal on their own); fall again and they're Critical (can't fight). The Monastery (now buildable) has beds that heal Critical heroes 5× faster
+- Big raids (from stage 5): more raiders; the castle only shelters 5 pawns + 2 per house, and raiders can catch up to 3 pawns left outside; they also set buildings near the castle on fire. Wrecked buildings stop working until Builders repair them. If the Monastery burns, heroes resting inside fall for good and join the Hall of Heroes (each relic: +1% attack for all heroes)
 - Pan / pinch-zoom camera, tap buildings and pawns
 - Autosave and "While you were away" offline earnings (up to 12h)
 

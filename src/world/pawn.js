@@ -28,15 +28,15 @@ export class Pawn {
     this.workT = 0;
   }
 
-  shelter() {
+  shelter(lockedOut = false) {
     if (this.sheltered) return;
-    this.release(); this.sheltered = true; this.carry = null;
-    if (!this.goTo(this.world.castle.door)) this.hidden = true;
+    this.release(); this.sheltered = true; this.carry = null; this.exposed = lockedOut;
+    if (!this.goTo(this.world.castle.door)) this.hidden = !lockedOut;
     this.state = 'walk';
   }
   unshelter() {
     if (!this.sheltered) return;
-    this.sheltered = false; this.hidden = false; this.state = 'think'; this.wait = Math.random();
+    this.sheltered = false; this.hidden = false; this.exposed = false; this.state = 'think'; this.wait = Math.random();
     this.world.fx(FX.dust, this.px, this.py);
   }
 
@@ -84,6 +84,7 @@ export class Pawn {
         if (d <= step) { this.px = tx; this.py = ty; this.path.shift(); } else { this.px += dx / d * step; this.py += dy / d * step; }
         return;
       }
+      if (this.exposed) { this.pose('idle'); return; } // locked out: waits by the door
       this.hidden = true; return;
     }
 
@@ -110,9 +111,14 @@ export class Pawn {
 
     if (this.state === 'work') {
       const t = this.target;
-      if (!t || (t.alive === false) || t.gone || (this.job === 'build' && t.done)) { this.release(); this.state = 'think'; this.wait = 0.3; return; }
+      if (!t || (t.alive === false) || t.gone || (this.job === 'build' && t.done && !t.wrecked)) { this.release(); this.state = 'think'; this.wait = 0.3; return; }
       this.pose(J.work);
       this.face(t);
+      if (this.job === 'build' && t.wrecked) {
+        t.repair = Math.min(1, (t.repair || 0) + dt * workMul / 12);
+        if (t.repair >= 1) { t.wrecked = false; t.repair = 0; w.events.toast?.(`${t.name} repaired`); w.events.changed?.(); this.release(); this.state = 'think'; this.wait = 0.5; }
+        return;
+      }
       if (this.job === 'build') {
         t.progress = Math.min(1, t.progress + dt * workMul / t.def.build);
         if (Math.floor(this.anim.t * 10) % 6 === 3 && Math.random() < 0.05) w.fx(FX.dust, this.px + (this.flip ? -20 : 20), this.py);
@@ -170,7 +176,7 @@ export class Pawn {
     }
 
     if (this.job === 'build') {
-      const sites = w.buildings.filter((b) => !b.done);
+      const sites = w.buildings.filter((b) => !b.done || b.wrecked);
       for (const b of sites) {
         const spots = tr.standSpots(b.x, b.y, b.w, b.h);
         const p = tr.path(this.tx, this.ty, (x, y) => spots.some((s) => s.x === x && s.y === y));

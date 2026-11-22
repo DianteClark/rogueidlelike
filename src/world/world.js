@@ -35,7 +35,7 @@ export class World {
     this.decor = []; this.effects = [];
     this.time = 0; this.hungry = false; this.eatT = 0; this.arriveT = 0; this.sheepT = 0;
     this.placing = null;
-    this.heroes = []; this.team = []; this.guards = []; this.freeSummons = FREE_SUMMONS; this.defeated = [];
+    this.heroes = []; this.team = []; this.guards = []; this.freeSummons = FREE_SUMMONS; this.defeated = []; this.hall = [];
     this.raid = null; this.raidAt = null; this.raidPlan = null;
     this.campaign = { region: 0, stage: 1, best: 0 };
     this.clouds = Array.from({ length: 3 }, (_, i) => ({ i: (i * 3) % 8, x: Math.random() * 2000 - 600, y: Math.random() * 1600, s: 7 + Math.random() * 6 }));
@@ -70,10 +70,11 @@ export class World {
       if (save.raidIn != null) { this.raidAt = save.raidIn; this.raidPlan = save.raidPlan; }
       this.freeSummons = save.freeSummons ?? 0;
       this.defeated = save.defeated ?? [];
+      this.hall = save.hall ?? [];
       this.campaign = { ...this.campaign, ...save.campaign };
     }
     if (save?.castleAt && this.canPlaceAfterLoad !== false) this.relocate(this.castle, save.castleAt.x, save.castleAt.y);
-    for (const b of buildings) this.addBuilding(new Building(b.type, b.x, b.y, { progress: b.progress ?? 1, variant: b.variant ?? 0, color: this.color, set: this.buildSet }));
+    for (const b of buildings) { const nb = this.addBuilding(new Building(b.type, b.x, b.y, { progress: b.progress ?? 1, variant: b.variant ?? 0, color: this.color, set: this.buildSet })); nb.wrecked = !!b.wrecked; }
     const sheepN = save?.sheep ?? L.sheep.length;
     for (let i = 0; i < sheepN; i++) {
       const p = L.sheep[i] ? { x: L.sheep[i][0], y: L.sheep[i][1] } : this.randomPenTile();
@@ -99,7 +100,7 @@ export class World {
 
   // ---------------------------------------------------------------- economy
   get pawnCap() {
-    return 4 + this.buildings.filter((b) => b.done && b.def.pawns).reduce((s, b) => s + b.def.pawns, 0);
+    return 4 + this.buildings.filter((b) => b.working && b.def.pawns).reduce((s, b) => s + b.def.pawns, 0);
   }
   get jobTotal() { return Object.values(this.jobs).reduce((a, b) => a + b, 0); }
   get idleCount() { return Math.max(0, this.pawns.length - this.jobTotal); }
@@ -214,7 +215,7 @@ export class World {
 
   // ---------------------------------------------------------------- injuries & the Monastery
   get bedCount() {
-    return this.buildings.filter((b) => b.done && b.def.beds).reduce((s, b) => s + b.def.beds, 0) + (this.buildings.some((b) => b.done && b.def.beds) ? this.mod('monasterySlots', 0) : 0);
+    return this.buildings.filter((b) => b.working && b.def.beds).reduce((s, b) => s + b.def.beds, 0) + (this.buildings.some((b) => b.working && b.def.beds) ? this.mod('monasterySlots', 0) : 0);
   }
   get bedsUsed() { return this.heroes.filter((h) => h.inMonastery).length; }
 
@@ -237,6 +238,41 @@ export class World {
     this.events.changed?.();
     return out;
   }
+
+  // A hero dies for good: removed from the roster and remembered in the Hall of Heroes.
+  fallHero(h) {
+    this.heroes = this.heroes.filter((x) => x !== h);
+    this.team = this.team.filter((id) => id !== h.id);
+    this.guards = this.guards.filter((id) => id !== h.id);
+    this.hall.push({ name: h.name, cls: h.cls, color: h.color, rarity: h.rarity, level: h.level, day: Date.now() });
+    this.events.toast?.(`${h.name} has fallen. Their relic rests in the Hall of Heroes.`, 4000);
+    this.events.changed?.();
+  }
+
+  // each fallen hero's relic: +1% attack for every hero (max 15%, doubled for the Fallen Crown)
+  get relicBonus() { return Math.min(0.15, this.hall.length * 0.01) * this.mod('relicMul'); }
+
+  wreck(b) {
+    if (!b || b === this.castle || b.wrecked || !b.done) return false;
+    b.wrecked = true; b.repair = 0;
+    this.fx(FX.explosion, cx(b.x + b.w / 2 - 0.5), foot(b.y));
+    this.events.toast?.(`The ${b.name} was wrecked! Builders can repair it.`, 3000);
+    if (b.def.beds) for (const h of [...this.heroes]) if (h.inMonastery) this.fallHero(h);
+    this.events.changed?.();
+    return true;
+  }
+
+  killPawn(p) {
+    if (!this.pawns.includes(p)) return;
+    p.release();
+    this.pawns = this.pawns.filter((x) => x !== p);
+    this.fx(FX.dustBig, p.px, p.py);
+    this.events.toast?.('A pawn was caught outside the walls…', 2500);
+    this.assignJobs();
+  }
+
+  // how many pawns fit inside the castle during a raid
+  get shelterCap() { return 5 + this.buildings.filter((b) => b.working && b.def.pawns).length * 2; }
 
   recoveryTick(dt) {
     let changed = false;
@@ -327,7 +363,7 @@ export class World {
 
   // ---------------------------------------------------------------- raids
   get defensePower() {
-    return this.guardHeroes.reduce((s, h) => s + power(h), 0) + this.buildings.filter((b) => b.type === 'tower' && b.done).length * 90;
+    return this.guardHeroes.reduce((s, h) => s + power(h), 0) + this.buildings.filter((b) => b.type === 'tower' && b.working).length * 90;
   }
 
   scheduleRaid(first) {
@@ -363,7 +399,7 @@ export class World {
     const left = this.raidAt - this.time;
     if (!this.raidWarned && left <= RAID_WARN) {
       this.raidWarned = true;
-      this.events.toast?.(`${this.raidPlan.tribe} sighted! Raid in ${Math.ceil(left)}s — assign guards in Heroes, build towers`, 4000);
+      this.events.toast?.(this.raidPlan.tier === 'real' ? `A BIG ${this.raidPlan.tribe} raid is coming in ${Math.ceil(left)}s! Pawns left outside can die and buildings can burn.` : `${this.raidPlan.tribe} sighted! Raid in ${Math.ceil(left)}s — assign guards in Heroes, build towers`, 4500);
     }
     if (left <= 0 && !this.raidStarting) this.startRaid();
   }
@@ -375,7 +411,10 @@ export class World {
     this.raidStarting = false;
     if (!ok) { this.scheduleRaid(false); return; }
     this.raid = raid;
-    for (const p of this.pawns) p.shelter?.();
+    const door = this.castle.door, cap = raid.plan.tier === 'real' ? this.shelterCap : Infinity;
+    [...this.pawns].sort((a, b) => Math.hypot(a.px - (door.x + 0.5) * T, a.py - door.y * T) - Math.hypot(b.px - (door.x + 0.5) * T, b.py - door.y * T))
+      .forEach((p, i) => p.shelter?.(i >= cap));
+    if (cap < this.pawns.length) this.events.toast?.(`The castle only shelters ${cap} pawns! Build more houses.`, 3500);
     this.events.raid?.(raid);
     this.events.changed?.();
   }
@@ -392,6 +431,15 @@ export class World {
       const share = Math.min(0.3, 0.1 + (atk - def) / atk * 0.2), lost = {};
       for (const k of ['wood', 'gold', 'meat']) { lost[k] = Math.floor(this.res[k] * share); this.res[k] -= lost[k]; }
       result = { won: false, lost };
+      if (plan.tier === 'real') {
+        const extra = Math.max(0, this.pawns.length - this.shelterCap);
+        const dead = Math.min(extra, 1 + Math.floor((atk - def) / atk * 3));
+        for (let i = 0; i < dead; i++) this.killPawn(this.pawns[this.pawns.length - 1]);
+        const targets = this.buildings.filter((b) => b !== this.castle && b.working);
+        const hit = targets[Math.floor(Math.random() * targets.length)];
+        if (hit) { this.wreck(hit); result.wrecked = hit.name; }
+        result.pawns = dead;
+      }
     }
     this.scheduleRaid(false);
     return result;
@@ -613,7 +661,8 @@ export class World {
     return {
       v: 2, t: Date.now(), kingdom: this.kingdom, seed: this.seed, castleAt: { x: this.castle.x, y: this.castle.y },
       res: this.res, jobs: this.jobs, pawns: this.pawns.length,
-      buildings: this.buildings.filter((b) => b !== this.castle).map((b) => ({ type: b.type, x: b.x, y: b.y, progress: b.progress, variant: b.variant })),
+      buildings: this.buildings.filter((b) => b !== this.castle).map((b) => ({ type: b.type, x: b.x, y: b.y, progress: b.progress, variant: b.variant, wrecked: !!b.wrecked })),
+      hall: this.hall,
       trees: this.trees.map((t) => [t.stock, Math.round(t.regrow)]),
       stones: this.stones.map((s) => [s.stock, Math.round(s.regrow)]),
       sheep: this.sheep.length,

@@ -51,7 +51,7 @@ export class Hud {
       bar.className = 'live';
     } else if (w.raidCountdown != null && w.raidCountdown <= 90) {
       const s = Math.ceil(w.raidCountdown);
-      bar.textContent = `${w.raidPlan?.tribe || 'Raiders'} arrive in ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+      bar.textContent = `${w.raidPlan?.tier === 'real' ? 'BIG raid' : (w.raidPlan?.tribe || 'Raiders')} in ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
       bar.className = '';
     } else bar.className = 'hidden';
     bar.onclick = () => {
@@ -180,7 +180,9 @@ export class Hud {
         <span>${w.freeSummons > 0 ? `<b>${w.freeSummons} free</b> recruit${w.freeSummons > 1 ? 's' : ''}!` : this.costHtml(cost)}</span>
         <button class="sbtn wbtn" style="height:54px;padding:0 14px" data-act="summon" ${w.heroes.length >= w.rosterCap || (cost && !w.canAfford(cost)) ? 'disabled' : ''}>Summon</button>
       </div>
-      <div class="herogrid">${cards || '<p class="muted">No heroes yet. Summon your first!</p>'}</div>`;
+      <div class="herogrid">${cards || '<p class="muted">No heroes yet. Summon your first!</p>'}</div>
+      ${w.hall.length ? `<h2 style="margin-top:12px">Hall of Heroes</h2><p class="muted">Relics of the fallen: +${Math.round(w.relicBonus * 100)}% attack for all heroes</p>
+        <div class="chips">${w.hall.map((f) => `<span class="chip">${f.name} · Lv ${f.level}</span>`).join('')}</div>` : ''}`;
   }
 
   synergyHtml(heroes) {
@@ -270,7 +272,7 @@ export class Hud {
     this.awayHtml = `<h2>While you were away</h2>
       <p>${h ? h + 'h ' : ''}${m}m passed${sum.capped ? ` (max ${sum.capH}h counted)` : ''}. Your pawns kept working:</p>
       <div class="row" style="justify-content:center;font-size:20px">${items}</div>
-      ${(sum.raids || []).map((r) => `<p>${r.won ? `⚔ Your guards beat off a raid (+${r.gold} gold).` : `⚔ Raiders hit the island and took ${Object.entries(r.lost).map(([k, n]) => n + ' ' + k).join(', ')}. Guards and towers help!`}</p>`).join('')}
+      ${(sum.raids || []).map((r) => `<p>${r.won ? `⚔ Your guards beat off a raid (+${r.gold} gold).` : `⚔ Raiders hit the island and took ${Object.entries(r.lost).map(([k, n]) => n + ' ' + k).join(', ')}.${r.pawns ? ` ${r.pawns} pawn${r.pawns > 1 ? 's' : ''} lost.` : ''}${r.wrecked ? ` The ${r.wrecked} was wrecked.` : ''} Guards and towers help!`}</p>`).join('')}
       <div style="text-align:center;margin-top:8px"><button class="sbtn wbtn" data-act="closepanel">Collect</button></div>`;
     this.open('away');
   }

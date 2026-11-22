@@ -10,16 +10,18 @@ import { mod, KINGDOMS } from '../data/kingdoms.js';
 
 const T = TILE;
 export const RAID_TIERS = {
-  gentle: { name: 'Raid', steal: true, killPawns: false },
+  gentle: { name: 'Raid' },
+  real: { name: 'Big raid' },   // pawns left outside can die, buildings get wrecked
 };
 
 // The raid the world schedules next, sized from campaign progress.
 export function planRaid(world) {
   const best = Math.max(1, world.campaign.best);
   const pool = REGIONS[0].pool.slice(0, Math.min(5, 2 + Math.floor(best / 2)));
-  const count = Math.min(7, 2 + Math.floor(best / 2));
+  const real = best >= 5 && Math.random() < 0.45;
+  const count = Math.min(9, 2 + Math.floor(best / 2) + (real ? 2 : 0));
   const enemies = Array.from({ length: count }, (_, i) => pool[(i * 7 + best) % pool.length]);
-  return { tier: 'gentle', tribe: 'Goblins', enemies, level: Math.max(1, best - 1) };
+  return { tier: real ? 'real' : 'gentle', tribe: 'Goblins', enemies, level: Math.max(1, best - 1 + (real ? 1 : 0)) };
 }
 
 export function raidPower(plan) {
@@ -74,14 +76,14 @@ export class Raid {
     this.ringColor = KINGDOMS[k]?.hex;
     w.guardHeroes.filter(canFight).forEach((h, i) => {
       const c = heroDef(h.cls), st = heroStats(h);
-      st.atk = Math.round(st.atk * mod(k, 'heroDamage'));
+      st.atk = Math.round(st.atk * mod(k, 'heroDamage') * (1 + (w.relicBonus || 0)));
       const u = new Unit(this, 'hero', h.cls, c.art(h.color), st, (door.x + 0.5 + (i - 1) * 0.6) * T, (door.y + 0.9) * T, { projectile: c.projectile, hero: h });
       applyBonuses(u, h, syn, k);
       this.heroes.push(u);
     });
     // towers shoot arrows (an invisible archer on top of each finished tower)
     const arrow = { src: `${FREE}Units/Blue Units/Archer/Arrow.png`, speed: 560, rotate: true };
-    this.towers = w.buildings.filter((b) => b.type === 'tower' && b.done).map((b) => ({
+    this.towers = w.buildings.filter((b) => b.type === 'tower' && b.working).map((b) => ({
       x: (b.x + 1) * T, y: (b.y + 1) * T - 150, cool: 0, range: 5.5 * T, atk: Math.round(14 * mod(k, 'defenseCost', 1) ** -1), b,
       arrow, head: 0, dead: false, side: 'hero', s: { atk: 14, def: 0 }, flip: false,
     }));
@@ -100,6 +102,15 @@ export class Raid {
       const foe = u.nearest(this.heroes);
       if (foe && Math.hypot(foe.x - u.x, foe.y - u.y) < 4 * T) { u.target = foe; return false; }
       u.target = null;
+      if (this.plan.tier === 'real' && !u.leaving && (this.kills || 0) < 3) {
+        const prey = this.world.pawns.filter((p) => p.exposed && !p.hidden)
+          .sort((a, b) => Math.hypot(a.px - u.x, a.py - u.y) - Math.hypot(b.px - u.x, b.py - u.y))[0];
+        if (prey && Math.hypot(prey.px - u.x, prey.py - u.y) < 3.5 * T) {
+          const dx = prey.px - u.x, dy = prey.py - u.y, d = Math.hypot(dx, dy);
+          if (d < 34) { this.world.killPawn(prey); this.kills = (this.kills || 0) + 1; this.fx(FX.dustBig, prey.px, prey.py); return true; }
+          u.anim.set(u.art.run); u.flip = dx < 0; u.x += dx / d * u.s.speed * dt; u.y += dy / d * u.s.speed * dt; return true;
+        }
+      }
       if (u.leaving) return this.walkRoute(u, -1, dt);
       if (u.step >= this.route.length) { this.steal(u, dt); return true; }
       return this.walkRoute(u, 1, dt);
@@ -135,6 +146,12 @@ export class Raid {
     const res = this.world.res;
     if (u.stealT > 0.5) {
       u.stealT = 0;
+      // big raids also set buildings near the castle on fire
+      u.wreckN = (u.wreckN || 0) + 1;
+      if (this.plan.tier === 'real' && u.wreckN % 6 === 0) {
+        const near = this.world.buildings.filter((b) => b !== this.world.castle && b.working && Math.hypot((b.x + b.w / 2) * T - u.x, (b.y + 1) * T - u.y) < 7 * T);
+        if (near.length) this.world.wreck(near[Math.floor(Math.random() * near.length)]);
+      }
       const kinds = ['wood', 'gold', 'meat'].filter((k) => res[k] > 0);
       if (kinds.length) {
         const k = kinds[Math.floor(Math.random() * kinds.length)];
@@ -175,6 +192,7 @@ export class Raid {
     for (const u of this.heroes) u.update(dt);
     for (const u of this.enemies) u.update(dt);
     for (const tw of this.towers) {
+      if (tw.b.wrecked) continue;
       tw.cool -= dt;
       if (tw.cool > 0) continue;
       const tgt = this.enemies.filter((e) => !e.dead).sort((a, b) => Math.hypot(a.x - tw.x, a.y - tw.y) - Math.hypot(b.x - tw.x, b.y - tw.y))[0];
