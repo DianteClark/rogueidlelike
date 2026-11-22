@@ -99,7 +99,7 @@ async function boot() {
     hud.toast('Preparing for battle…', 1200);
     let ok = false;
     try { ok = await b.prepare(); } finally { game.starting = false; }
-    if (!ok) { document.body.classList.remove('battling'); hud.toast('Add heroes to your team first'); return; }
+    if (!ok) { document.body.classList.remove('battling'); hud.toast(w.team.length ? 'Your team is too hurt to fight — heal them or swap heroes in' : 'Add heroes to your team first', 3000); return; }
     game.battle = b;
     bhud.show(b);
   };
