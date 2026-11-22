@@ -5,6 +5,7 @@ import { Tree, GoldStone, Building, Sheep, Fx, FloatText, Decor, cx, foot } from
 import { Pawn, JOBS } from './pawn.js';
 import { BUILDINGS, NATURE, FX, ICONS, TILE } from '../data/art.js';
 import { img } from '../engine/assets.js';
+import { KINGDOMS, mod } from '../data/kingdoms.js';
 
 const T = TILE;
 export const SAVE_KEY = 'tinycrowns.save.v1';
@@ -17,8 +18,10 @@ export const OFFLINE_CAP_H = 12;
 const OFFLINE_RATE = { wood: 8, gold: 5, meat: 7 };
 
 export class World {
-  constructor(events = {}) {
+  constructor(events = {}, kingdom = 'blue') {
     this.events = events; // { toast(msg), changed() }
+    this.kingdom = KINGDOMS[kingdom] ? kingdom : 'blue';
+    this.color = KINGDOMS[this.kingdom].color;
     this.terrain = new Terrain(HOME_MAP);
     this.res = { wood: 20, gold: 0, meat: 20 };
     this.jobs = { wood: 1, gold: 0, meat: 1, build: 1 };
@@ -32,7 +35,7 @@ export class World {
   // ---------------------------------------------------------------- setup
   init(save) {
     const L = HOME_LAYOUT, tr = this.terrain;
-    this.castle = this.addBuilding(new Building('castle', L.castle.x, L.castle.y));
+    this.castle = this.addBuilding(new Building('castle', L.castle.x, L.castle.y, { color: this.color }));
     L.trees.forEach(([x, y], i) => { const t = new Tree(x, y, (x * 7 + y * 3 + i) % 4); this.trees.push(t); tr.occupied[y][x] = t; });
     L.stones.forEach(([x, y, s]) => { const g = new GoldStone(x, y, s); this.stones.push(g); tr.occupied[y][x] = g; });
     L.bushes.forEach(([x, y], i) => this.decor.push(new Decor(NATURE.bushes[i % 4], x, y, { ox: (i % 3 - 1) * 14 })));
@@ -49,14 +52,14 @@ export class World {
       save.trees?.forEach((s, i) => { if (this.trees[i]) { this.trees[i].stock = s[0]; this.trees[i].regrow = s[1]; } });
       save.stones?.forEach((s, i) => { if (this.stones[i]) { this.stones[i].stock = s[0]; this.stones[i].regrow = s[1]; } });
     }
-    for (const b of buildings) this.addBuilding(new Building(b.type, b.x, b.y, { progress: b.progress ?? 1, variant: b.variant ?? 0 }));
+    for (const b of buildings) this.addBuilding(new Building(b.type, b.x, b.y, { progress: b.progress ?? 1, variant: b.variant ?? 0, color: this.color }));
     const sheepN = save?.sheep ?? L.sheep.length;
     for (let i = 0; i < sheepN; i++) {
       const p = L.sheep[i] ? { x: L.sheep[i][0], y: L.sheep[i][1] } : this.randomPenTile();
       if (p) this.sheep.push(new Sheep(this, p.x, p.y));
     }
     const door = this.castle.door;
-    for (let i = 0; i < pawnCount; i++) this.pawns.push(new Pawn(this, door.x + (i % 3) - 1, door.y + 1));
+    for (let i = 0; i < pawnCount; i++) this.pawns.push(new Pawn(this, door.x + (i % 3) - 1, door.y + 1, this.color));
     this.assignJobs();
   }
 
@@ -97,6 +100,17 @@ export class World {
       if (job) { want[job]--; p.setJob(job); } else p.setJob('idle');
     }
     this.events.changed?.();
+  }
+
+  mod(key, fallback = 1) { return mod(this.kingdom, key, fallback); }
+
+  // building cost after kingdom modifiers
+  costOf(type) {
+    const def = BUILDINGS[type]; if (!def.cost) return null;
+    const out = { ...def.cost };
+    if (out.wood) out.wood = Math.round(out.wood * this.mod('woodCost'));
+    if (def.defense) for (const k in out) out[k] = Math.round(out[k] * this.mod('defenseCost'));
+    return out;
   }
 
   canAfford(cost) { return !cost || Object.entries(cost).every(([k, v]) => this.res[k] >= v); }
@@ -166,10 +180,10 @@ export class World {
 
   confirmPlacing() {
     const p = this.placing; if (!p || !p.ok) return false;
-    const def = BUILDINGS[p.type];
-    if (!this.canAfford(def.cost)) { this.events.toast?.('Not enough resources'); return false; }
-    this.pay(def.cost);
-    const b = this.addBuilding(new Building(p.type, p.x, p.y, { progress: 0, variant: p.variant }));
+    const cost = this.costOf(p.type);
+    if (!this.canAfford(cost)) { this.events.toast?.('Not enough resources'); return false; }
+    this.pay(cost);
+    const b = this.addBuilding(new Building(p.type, p.x, p.y, { progress: 0, variant: p.variant, color: this.color }));
     this.fx(FX.dust, cx(b.x + b.w / 2 - 0.5), foot(b.y));
     this.placing = null;
     if (this.jobs.build === 0) this.events.toast?.('Assign a Builder in Pawns to construct it');
@@ -193,7 +207,7 @@ export class World {
 
     // food
     this.eatT += dt;
-    const eatEvery = EAT_EVERY / Math.max(1, this.pawns.length);
+    const eatEvery = EAT_EVERY / this.mod('eat') / Math.max(1, this.pawns.length);
     while (this.eatT >= eatEvery) {
       this.eatT -= eatEvery;
       if (this.res.meat > 0) this.res.meat--;
@@ -210,7 +224,7 @@ export class World {
       if (this.pawns.length < this.pawnCap && this.res.meat >= PAWN_COST + 5) {
         this.res.meat -= PAWN_COST;
         const d = this.castle.door;
-        const p = new Pawn(this, d.x, d.y);
+        const p = new Pawn(this, d.x, d.y, this.color);
         this.pawns.push(p);
         this.fx(FX.dust, p.px, p.py);
         this.events.toast?.('A new pawn joined your kingdom!');
@@ -259,7 +273,7 @@ export class World {
     const p = this.placing, def = BUILDINGS[p.type];
     ctx.fillStyle = p.ok ? 'rgba(120,255,140,.28)' : 'rgba(255,80,80,.32)';
     for (let i = 0; i < def.w; i++) for (let j = 0; j < def.h; j++) ctx.fillRect((p.x + i) * T + 2, (p.y - j) * T + 2, T - 4, T - 4);
-    const ghost = new Building(p.type, p.x, p.y, { variant: p.variant });
+    const ghost = new Building(p.type, p.x, p.y, { variant: p.variant, color: this.color });
     ctx.globalAlpha = 0.7; ghost.draw(ctx); ctx.globalAlpha = 1;
   }
 
@@ -275,7 +289,7 @@ export class World {
   // ---------------------------------------------------------------- save / offline
   serialize() {
     return {
-      v: 1, t: Date.now(),
+      v: 1, t: Date.now(), kingdom: this.kingdom,
       res: this.res, jobs: this.jobs, pawns: this.pawns.length,
       buildings: this.buildings.filter((b) => b !== this.castle).map((b) => ({ type: b.type, x: b.x, y: b.y, progress: b.progress, variant: b.variant })),
       trees: this.trees.map((t) => [t.stock, Math.round(t.regrow)]),
@@ -294,12 +308,13 @@ export class World {
 
   // Apply income for the time the app was closed. Returns a summary or null.
   applyOffline(seconds) {
-    const capped = Math.min(seconds, OFFLINE_CAP_H * 3600);
+    const capH = this.mod('idleCapH', OFFLINE_CAP_H);
+    const capped = Math.min(seconds, capH * 3600);
     if (capped < 60) return null;
     const min = capped / 60;
     const gain = {};
-    for (const k of ['wood', 'gold', 'meat']) gain[k] = Math.floor((this.jobs[k] || 0) * OFFLINE_RATE[k] * min);
-    const eaten = Math.floor(this.pawns.length * min * 60 / EAT_EVERY * 0.5);
+    for (const k of ['wood', 'gold', 'meat']) gain[k] = Math.floor((this.jobs[k] || 0) * OFFLINE_RATE[k] * min * (k === 'gold' ? 1 + this.mod('goldBonus', 0) / 3 : 1));
+    const eaten = Math.floor(this.pawns.length * min * 60 / EAT_EVERY * this.mod('eat') * 0.5);
     gain.meat -= Math.min(eaten, gain.meat + this.res.meat);
     for (const k in gain) this.res[k] = Math.max(0, this.res[k] + gain[k]);
     // trees/stones regrow while away
@@ -313,6 +328,6 @@ export class World {
       const used = Math.min(need, buildTime);
       b.progress = Math.min(1, b.progress + used / b.def.build); buildTime -= used;
     }
-    return { seconds: capped, gain, capped: seconds > capped };
+    return { seconds: capped, gain, capped: seconds > capped, capH };
   }
 }

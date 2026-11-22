@@ -26,7 +26,8 @@ export class Hud {
 
   // ---------------------------------------------------------------- top bar
   refresh() {
-    const w = this.world, r = w.res;
+    const w = this.world; if (!w) return;
+    const r = w.res;
     const fmt = (n) => n >= 10000 ? (n / 1000).toFixed(n >= 100000 ? 0 : 1) + 'k' : String(Math.floor(n));
     $('#res-wood span').textContent = fmt(r.wood);
     $('#res-gold span').textContent = fmt(r.gold);
@@ -102,10 +103,10 @@ export class Hud {
     const w = this.world;
     const rows = Object.entries(BUILDINGS).filter(([k]) => k !== 'castle').map(([k, d]) => `
       <div class="row">
-        <img class="ic" src="${enc(buildingSrc(d.file))}" alt="">
+        <img class="ic" src="${enc(buildingSrc(d.file, w.color))}" alt="">
         <div class="name">${d.name}<small>${d.locked ? 'Coming soon' : d.pawns ? `+${d.pawns} pawn room` : ''}</small></div>
-        ${d.locked ? '' : this.costHtml(d.cost)}
-        <button class="sbtn wbtn" data-act="place" data-arg="${k}" ${d.locked || !w.canAfford(d.cost) ? 'disabled' : ''}>Build</button>
+        ${d.locked ? '' : this.costHtml(w.costOf(k))}
+        <button class="sbtn wbtn" data-act="place" data-arg="${k}" ${d.locked || !w.canAfford(w.costOf(k)) ? 'disabled' : ''}>Build</button>
       </div>`).join('');
     return `<h2>Build</h2><p>Pick a building, then tap the island to place it. Builders will construct it.</p>${rows}`;
   }
@@ -116,7 +117,7 @@ export class Hud {
     return `<h2>Place ${d.name}</h2>
       <p>${p.ok ? 'Tap the island to move it.' : '<b style="color:#b13a2c">Can\'t build there.</b> Tap open flat ground.'}</p>
       <div class="row" style="justify-content:flex-end;gap:10px">
-        ${this.costHtml(d.cost)}
+        ${this.costHtml(this.world.costOf(p.type))}
         <button class="sbtn red wbtn" data-act="cancel">Cancel</button>
         <button class="sbtn wbtn" data-act="confirm" ${p.ok ? '' : 'disabled'}>Place</button>
       </div>`;
@@ -153,7 +154,7 @@ export class Hud {
     const items = ['wood', 'gold', 'meat'].map((k) =>
       `<span class="cost"><img src="${enc(ICONS[k])}" alt="">${sum.gain[k] >= 0 ? '+' : ''}${sum.gain[k]}</span>`).join(' ');
     this.awayHtml = `<h2>While you were away</h2>
-      <p>${h ? h + 'h ' : ''}${m}m passed${sum.capped ? ' (max 12h counted)' : ''}. Your pawns kept working:</p>
+      <p>${h ? h + 'h ' : ''}${m}m passed${sum.capped ? ` (max ${sum.capH}h counted)` : ''}. Your pawns kept working:</p>
       <div class="row" style="justify-content:center;font-size:20px">${items}</div>
       <div style="text-align:center;margin-top:8px"><button class="sbtn wbtn" data-act="closepanel">Collect</button></div>`;
     this.open('away');

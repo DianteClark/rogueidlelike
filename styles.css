@@ -165,3 +165,43 @@ img { image-rendering: pixelated; }
 #loading .bar { width: 180px; height: 10px; border-radius: 5px; background: rgba(255,255,255,.15); overflow: hidden; }
 #loadfill { height: 100%; width: 0; background: #f5d76e; transition: width .15s; }
 #loading.done { opacity: 0; pointer-events: none; }
+
+/* Kingdom select */
+#kingdom {
+  position: fixed; inset: 0; z-index: 5;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 10px;
+  padding: calc(var(--safe-top) + 12px) 12px calc(var(--safe-bottom) + 16px);
+  background: linear-gradient(to bottom, rgba(20,40,55,.55), rgba(20,40,55,0) 30%, rgba(20,40,55,0) 45%, rgba(20,40,55,.6));
+  transition: opacity .35s;
+}
+#kingdom.hidden { opacity: 0; pointer-events: none; }
+.kbanner {
+  position: absolute; top: calc(var(--safe-top) + 14px); left: 50%; transform: translateX(-50%);
+  white-space: nowrap; color: #fff; font-weight: 700; font-size: 22px; text-shadow: 0 2px 0 #1d3f52;
+  border: 30px solid transparent; border-width: 26px 52px;
+  border-image: url('assets/ui/banner.png') 128 fill / 26px 52px stretch;
+  padding: 0 4px;
+}
+#kpicks { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; width: 100%; }
+.kpick {
+  background: none; border: 0; padding: 0; position: relative;
+  aspect-ratio: 1; transition: transform .15s;
+}
+.kpick img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 4px 0 rgba(0,0,0,.25)); }
+.kpick.locked img { filter: grayscale(1) brightness(.55); }
+.kpick.sel { transform: scale(1.15) translateY(-6px); }
+.kpick .lock { position: absolute; right: 2px; bottom: 2px; width: 24px; height: 24px; }
+.kinfo { width: 100%; }
+#kdetail h2 { margin: 0 0 2px; font-size: 22px; }
+#kdetail .perk { display: flex; gap: 8px; align-items: center; font-size: 15px; line-height: 1.25; margin: 6px 0; }
+#kdetail .perk img { width: 30px; height: 30px; flex: none; object-fit: contain; }
+#kdetail .perk.bad { color: #9b3428; }
+#kdetail .tag { font-size: 13px; opacity: .75; }
+.bigbtn {
+  font: inherit; font-weight: 700; font-size: 22px; color: #fff; text-shadow: 0 2px 0 #1d3f52;
+  width: 82%; height: 76px; background: none; padding: 0;
+  border: 26px solid transparent;
+  border-image: url('assets/ui/btn-blue.png') 64 fill / 26px stretch;
+}
+.bigbtn:active { border-image-source: url('assets/ui/btn-blue-pressed.png'); }
+.bigbtn:disabled { filter: grayscale(1) brightness(.85); }

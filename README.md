@@ -6,13 +6,16 @@ Art by [Pixel Frog — Tiny Swords](https://pixelfrog-assets.itch.io/tiny-swords
 See **[DESIGN.md](DESIGN.md)** for the full game design and build order.
 
 ## Play on iPhone
-1. Open the game URL in **Safari**.
+**Live link: https://dianteclark.github.io/rogueidlelike/**
+
+1. Open the link in **Safari**.
 2. Tap **Share → Add to Home Screen**.
 3. Launch it from the home screen: fullscreen, works offline, saves on the device.
 
 Add `#reset` to the end of the URL once to wipe your save.
 
 ## What's in this build
+- Kingdom select: pick one of five colors, each with a combat passive, an island passive and a drawback (four unlock with Legacy)
 - Home island built from the Tiny Swords tilemap rules (flat ground, plateau, cliffs, stairs, animated foam, shadows)
 - Pawns with jobs: Woodcutter, Miner, Shepherd, Builder. They walk, work, climb stairs and carry resources to the castle
 - Food: pawns eat meat; new pawns arrive when there's house room and food

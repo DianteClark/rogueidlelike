@@ -35,20 +35,25 @@ Every run is an **Era**. Win it, lose it, or push into **Endless** for a high sc
 
 ## 4. Kingdoms & factions
 
-Five human kingdoms (the five color sets) plus monster tribes.
+Five human kingdoms (the five color sets) plus monster tribes. At the start of every run you pick a kingdom:
+your whole island (castle, buildings, pawns, heroes' home color) takes its color, and the other four become
+rival kingdoms. Each kingdom has a **combat passive**, an **island passive** and a **drawback**, so every
+pick is a strategy, not just a color.
 
-| Color | Kingdom | Bonus |
-|---|---|---|
-| Blue | Order of the Shield | Shields at battle start |
-| Red | Ember Empire | Frenzy at low HP (attack speed) |
-| Yellow | Sun Republic | Extra gold, crit chance |
-| Purple | Veil Temple | Healing over time |
-| Black | Fallen Crown | Lifesteal |
+| Kingdom | Combat | Island | Drawback | Unlock |
+|---|---|---|---|---|
+| Blue — Order of the Shield | Heroes start fights with a shield | Towers and walls cost 25% less and are sturdier | Heroes deal 10% less damage | Free |
+| Red — Ember Empire | Faster attacks below half HP | +50% loot from raids and campaign stages | Buildings cost 25% more wood | 150 Legacy |
+| Yellow — Sun Republic | +15% crit chance | +1 gold per mining trip, 16h idle cap | Pawns eat 30% more food | 300 Legacy |
+| Purple — Veil Temple | Heal over time in fights | Critical heroes recover 2× faster, Monastery +2 slots | Pawns work 15% slower | 500 Legacy |
+| Black — Fallen Crown | Lifesteal | Fallen heroes leave relics 2× as strong | Raids come 30% more often | 800 Legacy |
+
+Kingdoms are defined in `src/data/kingdoms.js`. Island passives and drawbacks that touch existing systems
+(build costs, gold, food, work speed, idle cap) are live now; combat and raid ones switch on as those systems land.
+
+**Team bonus:** heroes of any color can be recruited, but same-color teams trigger a stacking bonus (2/3/5 heroes).
 
 **Counter loop:** Blue > Red > Yellow > Purple > Black > Blue (+25% damage against the color it beats).
-
-The player picks a starting kingdom each run. Heroes of any color can be recruited, but same-color teams
-trigger the kingdom bonus (2/3/5 heroes).
 
 ### Monster tribes
 

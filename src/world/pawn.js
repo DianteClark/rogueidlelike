@@ -58,7 +58,8 @@ export class Pawn {
   update(dt) {
     const w = this.world;
     const speedMul = w.hungry ? 0.65 : 1;
-    this.anim.update(dt * (this.state === 'work' ? speedMul : 1));
+    const workMul = speedMul * w.mod('workSpeed');
+    this.anim.update(dt * (this.state === 'work' ? workMul : 1));
     const J = JOBS[this.job];
 
     if (this.state === 'think') {
@@ -88,7 +89,7 @@ export class Pawn {
       this.pose(J.work);
       this.face(t);
       if (this.job === 'build') {
-        t.progress = Math.min(1, t.progress + dt * speedMul / t.def.build);
+        t.progress = Math.min(1, t.progress + dt * workMul / t.def.build);
         if (Math.floor(this.anim.t * 10) % 6 === 3 && Math.random() < 0.05) w.fx(FX.dust, this.px + (this.flip ? -20 : 20), this.py);
         if (t.done) { w.onBuilt(t); this.release(); this.state = 'think'; this.wait = 0.5; }
         return;
@@ -99,7 +100,7 @@ export class Pawn {
         if (this.job === 'meat') { w.removeSheep(t); }
         else t.take(w);
         this.release();
-        this.carry = this.job; this.carryAmt = J.yield;
+        this.carry = this.job; this.carryAmt = J.yield + (this.job === 'gold' ? w.mod('goldBonus', 0) : 0);
         this.headHome();
       }
     }
