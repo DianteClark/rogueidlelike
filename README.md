@@ -13,14 +13,15 @@ See **[DESIGN.md](DESIGN.md)** for the full game design and build order.
 2. Tap **Share → Add to Home Screen**.
 3. Launch it from the home screen: fullscreen, works offline, saves on the device.
 
-Add `#reset` to the end of the URL once to wipe your save.
+Add `#reset` to the end of the URL once to wipe your save (`#reset&seed=123` to try a specific island).
 
 ## What's in this build
 - Kingdom select: pick one of five colors, each with a combat passive, an island passive and a drawback (four unlock with Legacy)
-- Home island built from the Tiny Swords tilemap rules (flat ground, plateau, cliffs, stairs, animated foam, shadows)
+- A new random island every run (seeded generator: plateau with stairs and gold, forest, sheep meadow, castle and house), built from the Tiny Swords tilemap rules (flat ground, plateau, cliffs, stairs, animated foam, shadows)
 - Pawns with jobs: Woodcutter, Miner, Shepherd, Builder. They walk, work, climb stairs and carry resources to the castle
 - Food: pawns eat meat; new pawns arrive when there's house room and food
 - Build houses (place, then builders construct them)
+- Clouds drift above the island and cast shadows on it
 - Pan / pinch-zoom camera, tap buildings and pawns
 - Autosave and "While you were away" offline earnings (up to 12h)
 
@@ -33,7 +34,7 @@ src/world/terrain.js   map parsing, autotiling, walkability, pathfinding
 src/world/world.js     the island simulation (resources, jobs, buildings, offline progress)
 src/world/pawn.js      pawn AI
 src/world/entities.js  trees, gold, sheep, buildings, effects
-src/world/island.js    the home island map + starting layout (edit the text map to reshape it)
+src/world/generate.js  seeded random island generator (map + starting layout)
 src/ui/hud.js          resource bar, panels, toasts
 src/data/art.js        every sprite path/frame size in one place
 assets/packs/          the Tiny Swords packs (cleaned copies)

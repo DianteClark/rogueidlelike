@@ -2,6 +2,7 @@
 import { loadAll, collectSrcs } from './engine/assets.js';
 import { Camera } from './engine/camera.js';
 import { World, SAVE_KEY } from './world/world.js';
+import { newSeed } from './world/generate.js';
 import { KINGDOMS, loadMeta } from './data/kingdoms.js';
 import { chooseKingdom } from './ui/kingdomSelect.js';
 import { Hud } from './ui/hud.js';
@@ -44,7 +45,7 @@ async function boot() {
   window.addEventListener('orientationchange', () => setTimeout(resize, 300));
 
   // shared art (terrain, nature, effects, UI); per-kingdom art loads when a color is picked
-  const common = collectSrcs({ t: { m: TERRAIN.tilemap(1), m3: TERRAIN.tilemap(3), s: TERRAIN.shadow, f: TERRAIN.foam }, n: NATURE, fx: FX });
+  const common = collectSrcs({ t: [1, 2, 3, 4].map((n) => TERRAIN.tilemap(n)), s: TERRAIN.shadow, f: TERRAIN.foam, n: NATURE, fx: FX });
   Object.values(ICONS).forEach((s) => common.add(s));
   const fill = document.getElementById('loadfill');
   await Promise.all([
@@ -52,7 +53,7 @@ async function boot() {
     document.fonts?.load('16px BoldPixels').catch(() => {}),
   ]);
 
-  if (location.hash === '#reset') { localStorage.removeItem(SAVE_KEY); history.replaceState(null, '', location.pathname); }
+  if (location.hash.startsWith('#reset')) { localStorage.removeItem(SAVE_KEY); }
   const save = World.loadSave();
   const hud = new Hud(game);
   game.hud = hud;
@@ -60,6 +61,8 @@ async function boot() {
   game.camera = cam;
 
   let building = 0;
+  const seedHash = location.hash.match(/seed=(\d+)/);
+  const previewSeed = seedHash ? Number(seedHash[1]) : newSeed();
   async function makeWorld(kingdom, saveData) {
     const ticket = ++building;
     await loadAll(colorSrcs(KINGDOMS[kingdom].color));
@@ -70,7 +73,7 @@ async function boot() {
       gained: (k) => hud.bump(k),
       building: (b) => hud.showBuilding(b),
     }, kingdom);
-    world.init(saveData);
+    world.init(saveData, previewSeed);
     world.terrain.buildStatic();
     const first = !game.world;
     game.world = world;

@@ -1,6 +1,6 @@
 // The home island: owns terrain, entities, resources and jobs; runs the simulation; saves/loads.
 import { Terrain } from './terrain.js';
-import { HOME_MAP, HOME_LAYOUT, PEN } from './island.js';
+import { generateIsland, newSeed } from './generate.js';
 import { Tree, GoldStone, Building, Sheep, Fx, FloatText, Decor, cx, foot } from './entities.js';
 import { Pawn, JOBS } from './pawn.js';
 import { BUILDINGS, NATURE, FX, ICONS, TILE } from '../data/art.js';
@@ -8,7 +8,7 @@ import { img } from '../engine/assets.js';
 import { KINGDOMS, mod } from '../data/kingdoms.js';
 
 const T = TILE;
-export const SAVE_KEY = 'tinycrowns.save.v1';
+export const SAVE_KEY = 'tinycrowns.save.v2';
 const MAX_SHEEP = 6;
 const PAWN_COST = 10;          // meat for a new pawn
 const EAT_EVERY = 30;          // seconds per meat per pawn
@@ -22,19 +22,22 @@ export class World {
     this.events = events; // { toast(msg), changed() }
     this.kingdom = KINGDOMS[kingdom] ? kingdom : 'blue';
     this.color = KINGDOMS[this.kingdom].color;
-    this.terrain = new Terrain(HOME_MAP);
     this.res = { wood: 20, gold: 0, meat: 20 };
     this.jobs = { wood: 1, gold: 0, meat: 1, build: 1 };
     this.trees = []; this.stones = []; this.buildings = []; this.sheep = []; this.pawns = [];
     this.decor = []; this.effects = [];
     this.time = 0; this.hungry = false; this.eatT = 0; this.arriveT = 0; this.sheepT = 0;
     this.placing = null;
-    this.clouds = Array.from({ length: 5 }, (_, i) => ({ i: i % 8, x: Math.random() * 2400 - 400, y: Math.random() * 1400, s: 6 + Math.random() * 8 }));
+    this.clouds = Array.from({ length: 3 }, (_, i) => ({ i: (i * 3) % 8, x: Math.random() * 2000 - 600, y: Math.random() * 1600, s: 7 + Math.random() * 6 }));
   }
 
   // ---------------------------------------------------------------- setup
-  init(save) {
-    const L = HOME_LAYOUT, tr = this.terrain;
+  init(save, seed) {
+    this.seed = save?.seed ?? seed ?? newSeed();
+    const gen = generateIsland(this.seed);
+    this.terrain = new Terrain(gen.map, { color: gen.colors.flat, highColor: gen.colors.high });
+    this.pen = gen.pen;
+    const L = gen.layout, tr = this.terrain;
     this.castle = this.addBuilding(new Building('castle', L.castle.x, L.castle.y, { color: this.color }));
     L.trees.forEach(([x, y], i) => { const t = new Tree(x, y, (x * 7 + y * 3 + i) % 4); this.trees.push(t); tr.occupied[y][x] = t; });
     L.stones.forEach(([x, y, s]) => { const g = new GoldStone(x, y, s); this.stones.push(g); tr.occupied[y][x] = g; });
@@ -133,8 +136,9 @@ export class World {
 
   randomPenTile() {
     for (let i = 0; i < 30; i++) {
-      const x = PEN.x0 + Math.floor(Math.random() * (PEN.x1 - PEN.x0 + 1));
-      const y = PEN.y0 + Math.floor(Math.random() * (PEN.y1 - PEN.y0 + 1));
+      const P = this.pen;
+      const x = P.x0 + Math.floor(Math.random() * (P.x1 - P.x0 + 1));
+      const y = P.y0 + Math.floor(Math.random() * (P.y1 - P.y0 + 1));
       if (this.terrain.walkable(x, y) && this.terrain.level[y][x] === 0) return { x, y };
     }
     return null;
@@ -247,10 +251,6 @@ export class World {
   draw(ctx, view) {
     const tr = this.terrain;
     tr.drawWater(ctx, view);
-    // cloud reflections drift across the water
-    ctx.globalAlpha = 0.35;
-    for (const c of this.clouds) { const im = img(NATURE.clouds[c.i].src); if (im) ctx.drawImage(im, Math.round(c.x), Math.round(c.y)); }
-    ctx.globalAlpha = 1;
     tr.drawFoam(ctx, this.time, view);
     tr.drawStatic(ctx);
 
@@ -265,8 +265,34 @@ export class World {
     for (const e of list) e.draw(ctx);
     for (const b of this.buildings) b.drawOver(ctx);
     if (this.placing) this.drawGhost(ctx);
+    this.drawClouds(ctx);
     for (const e of this.effects) if (e instanceof FloatText) e.draw(ctx);
 
+  }
+
+  // Clouds float above everything; each casts a soft shadow onto whatever is below it.
+  drawClouds(ctx) {
+    if (!this.cloudShadows) {
+      this.cloudShadows = NATURE.clouds.map((d) => {
+        const im = img(d.src); if (!im) return null;
+        const c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+        const g = c.getContext('2d');
+        g.drawImage(im, 0, 0);
+        g.globalCompositeOperation = 'source-in';
+        g.fillStyle = '#12303c'; g.fillRect(0, 0, c.width, c.height);
+        return c;
+      });
+    }
+    for (const c of this.clouds) {
+      const sh = this.cloudShadows[c.i];
+      if (sh) { ctx.globalAlpha = 0.16; ctx.drawImage(sh, Math.round(c.x + 40), Math.round(c.y + 170)); }
+    }
+    ctx.globalAlpha = 0.92;
+    for (const c of this.clouds) {
+      const im = img(NATURE.clouds[c.i].src);
+      if (im) ctx.drawImage(im, Math.round(c.x), Math.round(c.y));
+    }
+    ctx.globalAlpha = 1;
   }
 
   drawGhost(ctx) {
@@ -289,7 +315,7 @@ export class World {
   // ---------------------------------------------------------------- save / offline
   serialize() {
     return {
-      v: 1, t: Date.now(), kingdom: this.kingdom,
+      v: 2, t: Date.now(), kingdom: this.kingdom, seed: this.seed,
       res: this.res, jobs: this.jobs, pawns: this.pawns.length,
       buildings: this.buildings.filter((b) => b !== this.castle).map((b) => ({ type: b.type, x: b.x, y: b.y, progress: b.progress, variant: b.variant })),
       trees: this.trees.map((t) => [t.stock, Math.round(t.regrow)]),
