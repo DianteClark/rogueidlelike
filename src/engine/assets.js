@@ -38,8 +38,8 @@ export function frameCount(def) {
 }
 
 // Draw frame `f` of a strip with its anchor at (x, y). flip mirrors horizontally around the anchor.
-export function drawFrame(ctx, def, f, x, y, flip = false, alpha = 1) {
-  const im = img(def.src);
+export function drawFrame(ctx, def, f, x, y, flip = false, alpha = 1, override = null) {
+  const im = override || img(def.src);
   if (!im) return;
   const fw = def.fw || im.width, fh = def.fh || im.height;
   const n = def.fw ? Math.max(1, Math.floor(im.width / fw)) : 1;
@@ -76,4 +76,18 @@ export class Anim {
   // true once per completed loop
   get loops() { return Math.floor(this.t * this.fps / frameCount(this.def)); }
   draw(ctx, x, y, flip, alpha) { drawFrame(ctx, this.def, this.frame, x, y, flip, alpha); }
+}
+
+// A pure-white copy of a sprite sheet, used to flash units when they take a hit.
+const whiteCache = new Map();
+export function whiteSheet(src) {
+  if (whiteCache.has(src)) return whiteCache.get(src);
+  const im = img(src); if (!im || !im.complete) return null;
+  const c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+  const g = c.getContext('2d');
+  g.drawImage(im, 0, 0);
+  g.globalCompositeOperation = 'source-in';
+  g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+  whiteCache.set(src, c);
+  return c;
 }

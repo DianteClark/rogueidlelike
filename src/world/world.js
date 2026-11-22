@@ -6,7 +6,8 @@ import { Pawn, JOBS } from './pawn.js';
 import { BUILDINGS, NATURE, FX, ICONS, TILE } from '../data/art.js';
 import { img } from '../engine/assets.js';
 import { KINGDOMS, mod } from '../data/kingdoms.js';
-import { makeHero, SUMMON_COST, FREE_SUMMONS, TEAM_SIZE, BASE_ROSTER, levelCost, MAX_LEVEL } from '../game/heroes.js';
+import { makeHero, SUMMON_COST, FREE_SUMMONS, TEAM_SIZE, BASE_ROSTER, levelCost, MAX_LEVEL, addXp } from '../game/heroes.js';
+import { REGIONS } from '../data/units.js';
 
 const T = TILE;
 export const SAVE_KEY = 'tinycrowns.save.v2';
@@ -190,6 +191,29 @@ export class World {
     this.events.changed?.();
   }
 
+  // ---------------------------------------------------------------- campaign
+  // idle gold per minute from the furthest stage cleared
+  get campaignRate() { return Math.round(this.campaign.best * 1.5 * 10) / 10; }
+
+  winStage(stage, survivors) {
+    const R = REGIONS[this.campaign.region];
+    const gold = Math.round((25 + stage * 10) * this.mod('lootMul'));
+    const xp = 20 + stage * 8;
+    this.res.gold += gold;
+    const heroes = this.team.map((id) => this.hero(id)).filter(Boolean).map((hero) => ({ hero, levels: addXp(hero, xp) }));
+    let recruits = 0, unlocked = null;
+    if (stage === this.campaign.stage) {
+      if (stage % 3 === 0) recruits = 1;
+      if (stage === R.stages) { recruits = 2; unlocked = `${R.name} conquered!`; }
+      this.freeSummons += recruits;
+      this.campaign.best = Math.max(this.campaign.best, stage);
+      if (stage < R.stages) this.campaign.stage = stage + 1;
+    }
+    this.events.changed?.();
+    this.save();
+    return { gold, xp, heroes, recruits, unlocked, survivors };
+  }
+
   dismiss(id) {
     this.heroes = this.heroes.filter((h) => h.id !== id);
     this.team = this.team.filter((x) => x !== id);
@@ -284,6 +308,10 @@ export class World {
         this.assignJobs();
       }
     }
+
+    // idle gold from campaign progress
+    this.campGold = (this.campGold || 0) + this.campaignRate / 60 * dt;
+    if (this.campGold >= 1) { const g = Math.floor(this.campGold); this.campGold -= g; this.res.gold += g; this.events.changed?.(); }
 
     // sheep breed back slowly
     this.sheepT += dt;
@@ -392,6 +420,7 @@ export class World {
     for (const k of ['wood', 'gold', 'meat']) gain[k] = Math.floor((this.jobs[k] || 0) * OFFLINE_RATE[k] * min * (k === 'gold' ? 1 + this.mod('goldBonus', 0) / 3 : 1));
     const eaten = Math.floor(this.pawns.length * min * 60 / EAT_EVERY * this.mod('eat') * 0.5);
     gain.meat -= Math.min(eaten, gain.meat + this.res.meat);
+    gain.gold += Math.floor(this.campaignRate * min * 0.8);
     for (const k in gain) this.res[k] = Math.max(0, this.res[k] + gain[k]);
     // trees/stones regrow while away
     for (const n of [...this.trees, ...this.stones]) { n.regrow -= capped; if (n.regrow <= 0 && n.stock <= 0) n.stock = n.max; }

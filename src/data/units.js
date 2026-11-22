@@ -127,9 +127,9 @@ export const ENEMIES = {
     avatar: E('Gnoll', 'Gnoll_Avatar.png'),
   },
   troll: {
-    name: 'Troll', tribe: 'Brutes', boss: true, stats: { hp: 900, atk: 30, def: 6, rate: 2.2, range: 1.8, speed: 45 },
+    name: 'Troll', tribe: 'Brutes', boss: true, stats: { hp: 1000, atk: 26, def: 4, rate: 2.6, range: 1.8, speed: 45 },
     art: { idle: sq(E('Troll', 'Troll_Idle.png'), 384, 296), run: sq(E('Troll', 'Troll_Walk.png'), 384, 296),
-      attack: [sq(E('Troll', 'Troll_Attack.png'), 384, 296)], hitFrame: 3, splash: 1.6,
+      attack: [sq(E('Troll', 'Troll_Attack.png'), 384, 296)], hitFrame: 3, splash: 1.2,
       dead: sq(E('Extra/Troll Dead', 'Troll_Dead.png'), 384, 296) },
     avatar: E('Troll', 'Troll_Avatar.png'),
   },
@@ -147,7 +147,7 @@ export const REGIONS = [
 export function stageEnemies(regionIdx, stage) {
   const R = REGIONS[regionIdx];
   if (stage === R.stages) return [R.boss, 'torchGoblin', 'spearGoblin'];
-  const count = Math.min(7, 2 + Math.floor(stage * 0.6));
+  const count = Math.min(6, 2 + Math.floor(stage * 0.45));
   const unlocked = R.pool.slice(0, Math.min(R.pool.length, 2 + Math.floor(stage / 2)));
   const list = [];
   let s = stage * 9301 + 49297;
@@ -155,4 +155,4 @@ export function stageEnemies(regionIdx, stage) {
   return list;
 }
 
-export const stageScale = (stage) => 1 + (stage - 1) * 0.16;
+export const stageScale = (stage) => 1 + (stage - 1) * 0.1;

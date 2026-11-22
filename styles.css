@@ -262,3 +262,57 @@ img { image-rendering: pixelated; }
 #reveal-text { position: relative; font-size: 28px; text-shadow: 0 3px 0 #0d1d26; }
 #reveal-text small { display: block; font-size: 18px; margin-top: 4px; }
 #reveal .tapnote { position: absolute; bottom: calc(var(--safe-bottom) + 40px); opacity: .7; font-size: 15px; }
+
+/* Battle HUD */
+body.battling #topbar, body.battling #bottombar, body.battling #panel { display: none; }
+#battlehud { position: absolute; inset: 0; pointer-events: none; }
+#battlehud.hidden { display: none; }
+#battlehud > * { pointer-events: auto; }
+.kbanner.small { font-size: 18px; top: calc(var(--safe-top) + 12px); pointer-events: none; }
+#bh-bottom {
+  position: absolute; left: 10px; right: 10px; bottom: calc(var(--safe-bottom) + 10px);
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 10px;
+}
+#bh-bottom .sbtn { height: 56px; min-width: 92px; }
+#bh-rally {
+  position: relative; width: 116px; height: 124px; padding: 0; border: 0; background: none;
+  font: inherit; color: #fff; text-shadow: 0 2px 0 #1d3f52; font-size: 18px;
+  display: flex; flex-direction: column; align-items: center;
+}
+#bh-rally img { width: 96px; height: 96px; object-fit: contain; filter: grayscale(.7) brightness(.8); transition: filter .2s, transform .2s; }
+#bh-rally.ready img { filter: drop-shadow(0 0 12px #ffd24a); animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 50% { transform: scale(1.08); } }
+#bh-rally .meter { width: 86px; height: 10px; border-radius: 5px; background: rgba(20,30,40,.7); overflow: hidden; margin-top: -4px; }
+#bh-meter { height: 100%; width: 0; background: linear-gradient(90deg, #f5d76e, #ffb43a); }
+#bh-result {
+  position: absolute; left: 10px; right: 10px; top: 28%;
+  transition: opacity .3s, transform .3s;
+}
+#bh-result.hidden { opacity: 0; transform: translateY(20px); pointer-events: none; }
+#bh-result h2 { font-size: 30px; margin: 0 0 6px; text-align: center; }
+#bh-result p { text-align: center; }
+.lvups { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 6px 0; }
+.lvups div { text-align: center; font-size: 13px; width: 62px; }
+.lvups img { width: 54px; height: 54px; object-fit: contain; }
+#cutin {
+  position: fixed; left: 0; right: 0; top: 34%; height: 150px; z-index: 9; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255,210,74,.9) 20%, rgba(255,180,58,.9) 80%, transparent);
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  font-size: 34px; color: #fff; text-shadow: 0 3px 0 #6a3b12;
+  transform: skewY(-6deg);
+}
+#cutin.hidden { display: none; }
+#cutin img { width: 150px; height: 150px; object-fit: contain; }
+#cutin.go { animation: cutin 1.1s ease-in-out forwards; }
+@keyframes cutin {
+  0% { transform: skewY(-6deg) translateX(110%); }
+  25%, 70% { transform: skewY(-6deg) translateX(0); }
+  100% { transform: skewY(-6deg) translateX(-110%); }
+}
+.campaign-stages { display: flex; gap: 4px; margin: 8px 0; }
+.campaign-stages div { flex: 1; height: 12px; border-radius: 4px; background: rgba(59,47,42,.18); }
+.campaign-stages div.done { background: #6fb04f; }
+.campaign-stages div.cur { background: #f5b13a; }
+.campaign-stages div.boss { outline: 2px solid #b13a2c; }
+.foes { display: flex; gap: 2px; flex-wrap: wrap; margin: 4px 0 8px; }
+.foes img { width: 48px; height: 48px; object-fit: contain; }

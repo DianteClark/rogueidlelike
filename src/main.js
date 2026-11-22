@@ -5,6 +5,8 @@ import { World, SAVE_KEY } from './world/world.js';
 import { newSeed } from './world/generate.js';
 import { KINGDOMS, loadMeta } from './data/kingdoms.js';
 import { chooseKingdom } from './ui/kingdomSelect.js';
+import { Battle, ARENA_W, ARENA_H } from './battle/battle.js';
+import { BattleHud } from './ui/battleHud.js';
 import { Hud } from './ui/hud.js';
 import { pawnArt, TERRAIN, NATURE, FX, BUILDINGS, buildingSrc, ICONS, TILE } from './data/art.js';
 
@@ -28,8 +30,17 @@ function fitHeight() {
   document.documentElement.style.setProperty('--app-h', h + 'px');
 }
 
+function measureSafeTop() {
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:env(safe-area-inset-top, 0px);visibility:hidden';
+  document.body.appendChild(probe);
+  game.safeTop = probe.offsetHeight;
+  probe.remove();
+}
+
 function resize() {
   fitHeight();
+  measureSafeTop();
   game.dpr = Math.min(3, window.devicePixelRatio || 1);
   canvas.width = Math.round(canvas.clientWidth * game.dpr);
   canvas.height = Math.round(canvas.clientHeight * game.dpr);
@@ -57,6 +68,23 @@ async function boot() {
   const save = World.loadSave();
   const hud = new Hud(game);
   game.hud = hud;
+  const bhud = new BattleHud(game);
+  game.bhud = bhud;
+  game.startBattle = async (replay) => {
+    const w = game.world, c = w.campaign;
+    const stage = replay ? Math.max(1, c.best) : c.stage;
+    const b = new Battle({
+      world: w, regionIdx: c.region, stage,
+      onEnd: (win, battle) => {
+        const reward = win ? w.winStage(stage) : null;
+        bhud.result(win, reward, battle, () => { game.battle = null; bhud.hide(); hud.refresh(); w.save(); });
+      },
+    });
+    hud.toast('Preparing for battle…', 1200);
+    if (!(await b.prepare())) { hud.toast('Add heroes to your team first'); return; }
+    game.battle = b;
+    bhud.show(b);
+  };
   const cam = new Camera(canvas);
   game.camera = cam;
 
@@ -152,12 +180,33 @@ function startLoop() {
     if (game.world) {
       game.camera.update(dt);
       game.world.update(dt);
-      render();
+      if (game.battle) { game.battle.update(dt); game.bhud.update(game.battle); renderBattle(); }
+      else render();
     }
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
   return { reset() { last = performance.now(); } };
+}
+
+function renderBattle() {
+  const { battle, dpr } = game;
+  const cw = canvas.clientWidth, ch = canvas.clientHeight;
+  const safeTop = game.safeTop;
+  const zoom = Math.min(cw / (ARENA_W * TILE), (ch - safeTop - 190) / (ARENA_H * TILE));
+  const s = zoom * dpr;
+  const ox = (cw - ARENA_W * TILE * zoom) / 2, oy = safeTop + 40 + Math.max(0, (ch - safeTop - 190 - ARENA_H * TILE * zoom) / 2);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = '#47ABA9';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.setTransform(s, 0, 0, s, Math.round(ox * dpr), Math.round(oy * dpr));
+  ctx.imageSmoothingEnabled = false;
+  battle.draw(ctx);
+  if (battle.flashScreen > 0) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = `rgba(255,236,170,${Math.max(0, battle.flashScreen) * 0.5})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
 }
 
 function render() {

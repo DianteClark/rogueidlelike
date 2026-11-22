@@ -23,6 +23,8 @@ Add `#reset` to the end of the URL once to wipe your save (`#reset&seed=123` to 
 - Build houses (place, then builders construct them)
 - Clouds drift above the island and cast shadows on it
 - Heroes: summon (3 free, then gold) with a reveal, 7 classes × 5 colors × 4 rarities, levels, a 5-hero campaign team
+- Campaign: Goblin Coast, 10 stages ending in a Troll boss. Auto-battles with hit flashes, damage numbers, projectiles, kingdom combat passives, the King's Royal Rally (with cut-in), x2 speed, retreat, replay for farming
+- Rewards: gold, hero XP and level-ups, free recruits every 3 stages; idle gold from your best stage
 - Pan / pinch-zoom camera, tap buildings and pawns
 - Autosave and "While you were away" offline earnings (up to 12h)
 
@@ -37,6 +39,10 @@ src/world/pawn.js      pawn AI
 src/world/entities.js  trees, gold, sheep, buildings, effects
 src/world/generate.js  seeded random island generator (map + starting layout)
 src/ui/hud.js          resource bar, panels, toasts
+src/ui/battleHud.js    battle overlay (rally, speed, retreat, results)
+src/battle/battle.js   auto-battle engine
+src/game/heroes.js     hero model: summoning, stats, levels
+src/data/units.js      hero classes, enemies, campaign regions
 src/data/art.js        every sprite path/frame size in one place
 assets/packs/          the Tiny Swords packs (cleaned copies)
 tools/                 import_packs.py (re-import new pack versions), make_icon.py (app icon)
