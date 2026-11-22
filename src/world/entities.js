@@ -180,4 +180,67 @@ export class Decor {
   }
 }
 
+// The rubber duck: bobs around the coast. Tap it for a little treasure; sometimes it's golden.
+export class Duck {
+  constructor(world) {
+    this.world = world; this.anim = new Anim(NATURE.duck, 4);
+    this.visible = false; this.wait = 20 + Math.random() * 40; this.golden = false;
+  }
+  waterSpots() {
+    if (this.spots) return this.spots;
+    const tr = this.world.terrain, out = [];
+    for (let y = 1; y < tr.h - 1; y++) for (let x = 1; x < tr.w - 1; x++) {
+      if (tr.land[y][x] || tr.cliff[y][x]) continue;
+      let near = false, touch = false;
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (tr.land[y + dy]?.[x + dx]) { near = true; if (Math.abs(dx) <= 1 && Math.abs(dy) <= 1) touch = true; }
+      if (near && !touch) out.push({ x, y });
+    }
+    return (this.spots = out);
+  }
+  appear() {
+    const s = this.waterSpots(); if (!s.length) return;
+    const p = s[Math.floor(Math.random() * s.length)];
+    this.px = cx(p.x); this.py = foot(p.y) - 20; this.goal = null;
+    this.golden = Math.random() < 0.1;
+    this.visible = true; this.life = 90 + Math.random() * 60;
+    this.world.fx(FX.splash, this.px, this.py + 20);
+  }
+  update(dt) {
+    this.anim.update(dt);
+    if (!this.visible) { this.wait -= dt; if (this.wait <= 0) this.appear(); return; }
+    this.life -= dt;
+    if (this.life <= 0) { this.visible = false; this.wait = 120 + Math.random() * 180; return; }
+    if (!this.goal || Math.hypot(this.goal.x - this.px, this.goal.y - this.py) < 3) {
+      const s = this.waterSpots(), p = s[Math.floor(Math.random() * s.length)];
+      if (Math.hypot(cx(p.x) - this.px, foot(p.y) - this.py) < 400) this.goal = { x: cx(p.x), y: foot(p.y) - 20 };
+      return;
+    }
+    const dx = this.goal.x - this.px, dy = this.goal.y - this.py, d = Math.hypot(dx, dy);
+    this.px += dx / d * 14 * dt; this.py += dy / d * 14 * dt; this.flip = dx < 0;
+  }
+  hit(wx, wy) {
+    if (!this.visible || Math.hypot(wx - this.px, wy - this.py + 10) > 46) return false;
+    this.visible = false; this.wait = 180 + Math.random() * 240;
+    this.world.fx(FX.splash, this.px, this.py + 20);
+    this.world.duckReward(this.golden, this.px, this.py);
+    return true;
+  }
+  get sortY() { return this.py; }
+  draw(ctx) {
+    const b = Math.sin(this.anim.t * 2.5) * 2;
+    ctx.save(); ctx.translate(this.px, this.py + b); ctx.scale(2, 2);
+    drawFrame(ctx, NATURE.duck, this.anim.frame, 0, 0, this.flip);
+    if (this.golden) {
+      if (!Duck.gold) {
+        const im = img(NATURE.duck.src);
+        if (im) { const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; const g = c.getContext('2d');
+          g.drawImage(im, 0, 0); g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(255,205,60,.65)'; g.fillRect(0, 0, c.width, c.height); Duck.gold = c; }
+      }
+      if (Duck.gold) drawFrame(ctx, NATURE.duck, this.anim.frame, 0, 0, this.flip, 1, Duck.gold);
+    }
+    ctx.restore();
+    if (this.golden && Math.floor(this.anim.t * 3) % 2) { ctx.fillStyle = '#fff6b0'; ctx.fillRect(this.px + 18, this.py - 44, 4, 4); ctx.fillRect(this.px - 22, this.py - 30, 3, 3); }
+  }
+}
+
 export { pawnArt };

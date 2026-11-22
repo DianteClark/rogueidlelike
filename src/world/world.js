@@ -1,7 +1,7 @@
 // The home island: owns terrain, entities, resources and jobs; runs the simulation; saves/loads.
 import { Terrain } from './terrain.js';
 import { generateIsland, newSeed } from './generate.js';
-import { Tree, GoldStone, Building, Sheep, Fx, FloatText, Decor, cx, foot } from './entities.js';
+import { Tree, GoldStone, Building, Sheep, Fx, FloatText, Decor, Duck, cx, foot } from './entities.js';
 import { Pawn, JOBS } from './pawn.js';
 import { BUILDINGS, NATURE, FX, ICONS, TILE } from '../data/art.js';
 import { img } from '../engine/assets.js';
@@ -53,7 +53,7 @@ export class World {
     L.bushes.forEach(([x, y], i) => this.decor.push(new Decor(NATURE.bushes[i % 4], x, y, { ox: (i % 3 - 1) * 14 })));
     L.rocks.forEach(([x, y], i) => this.decor.push(new Decor(NATURE.rocks[i % 4], x, y)));
     L.waterRocks.forEach(([x, y], i) => this.decor.push(new Decor(NATURE.waterRocks[i % 4], x, y)));
-    this.decor.push(new Decor(NATURE.duck, L.duck[0], L.duck[1], { fps: 4, bob: true }));
+    this.duck = new Duck(this);
 
     let pawnCount = 3, buildings = L.buildings;
     if (save) {
@@ -142,6 +142,25 @@ export class World {
   }
 
   fx(def, x, y) { this.effects.push(new Fx(def, x, y)); }
+
+  duckReward(golden, x, y) {
+    const lvl = 1 + this.campaign.best;
+    if (golden) {
+      const g = 60 + lvl * 15;
+      this.res.gold += g; this.freeSummons += 1;
+      this.effects.push(new FloatText('+' + g, x, y - 30, ICONS.gold));
+      this.events.toast?.(`Golden duck! +${g} gold and a free recruit!`, 3000);
+    } else {
+      const k = ['wood', 'gold', 'meat'][Math.floor(Math.random() * 3)];
+      const n = Math.round((15 + Math.random() * 20) * (1 + lvl * 0.2));
+      this.res[k] += n;
+      this.effects.push(new FloatText('+' + n, x, y - 30, ICONS[k]));
+      this.events.toast?.('Quack! The duck had treasure.');
+    }
+    this.events.gained?.('gold');
+    this.events.changed?.();
+    this.save();
+  }
 
   removeSheep(s) {
     s.gone = true;
@@ -399,14 +418,20 @@ export class World {
     if (this.campGold >= 1) { const g = Math.floor(this.campGold); this.campGold -= g; this.res.gold += g; this.events.changed?.(); }
 
     // sheep breed back slowly
+    // the flock breeds faster when it's small; if it ever empties, a new pair wanders in
     this.sheepT += dt;
-    if (this.sheepT > 20) {
+    const n = this.sheep.length;
+    const breedEvery = n === 0 ? 45 : n < 3 ? 8 : 18;
+    if (this.sheepT > breedEvery) {
       this.sheepT = 0;
-      if (this.sheep.length < MAX_SHEEP && this.sheep.length >= 1) {
-        const p = this.randomPenTile();
-        if (p) { const s = new Sheep(this, p.x, p.y); this.sheep.push(s); this.fx(FX.dust, s.px, s.py); }
+      if (n < MAX_SHEEP) {
+        for (let i = 0; i < (n === 0 ? 2 : 1); i++) {
+          const p = this.randomPenTile();
+          if (p) { const s = new Sheep(this, p.x, p.y); this.sheep.push(s); this.fx(FX.dust, s.px, s.py); }
+        }
       }
     }
+    this.duck?.update(dt);
   }
 
   // ---------------------------------------------------------------- drawing
@@ -421,7 +446,7 @@ export class World {
       const x = e.px ?? (e.x + (e.w || 1) / 2) * T, y = e.sortY;
       return x > view.x - pad && x < view.x + view.w + pad && y > view.y - 40 && y < view.y + view.h + pad;
     };
-    const list = [...this.decor, ...this.trees, ...this.stones, ...this.buildings, ...this.sheep, ...this.pawns.filter((p) => !p.hidden), ...(this.raid ? this.raid.drawables : []), ...this.effects.filter((e) => !(e instanceof FloatText))]
+    const list = [...this.decor, ...this.trees, ...this.stones, ...this.buildings, ...this.sheep, ...this.pawns.filter((p) => !p.hidden), ...(this.duck?.visible ? [this.duck] : []), ...(this.raid ? this.raid.drawables : []), ...this.effects.filter((e) => !(e instanceof FloatText))]
       .filter(vis);
     list.sort((a, b) => a.sortY - b.sortY);
     for (const e of list) e.draw(ctx);
@@ -469,6 +494,7 @@ export class World {
   // ---------------------------------------------------------------- input
   tap(wx, wy) {
     if (this.placing) { this.movePlacing(wx, wy); return; }
+    if (this.duck?.hit(wx, wy)) return;
     const hitPawn = this.pawns.find((p) => Math.abs(p.px - wx) < 28 && wy < p.py + 8 && wy > p.py - 70);
     if (hitPawn) { this.events.toast?.(`${JOBS[hitPawn.job].name}${hitPawn.carry ? ' — carrying ' + hitPawn.carry : ''}`); return; }
     const hitB = [...this.buildings].reverse().find((b) => b.contains(wx, wy));

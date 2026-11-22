@@ -158,7 +158,9 @@ export class Pawn {
     }
 
     if (this.job === 'meat') {
-      const sheep = w.sheep.filter((s) => !s.claimed && !s.gone);
+      // always leave a breeding pair in the meadow
+      const spare = w.sheep.length - 2 - w.sheep.filter((s) => s.claimed).length;
+      const sheep = spare > 0 ? w.sheep.filter((s) => !s.claimed && !s.gone) : [];
       sheep.sort((a, b) => Math.hypot(a.px - this.px, a.py - this.py) - Math.hypot(b.px - this.px, b.py - this.py));
       for (const s of sheep.slice(0, 3)) {
         const p = tr.path(this.tx, this.ty, (x, y) => Math.abs(s.tx - x) + Math.abs(s.ty - y) === 1);
