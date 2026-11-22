@@ -4,12 +4,19 @@ import { generateIsland, newSeed } from './generate.js';
 import { Tree, GoldStone, Building, Sheep, Fx, FloatText, Decor, Duck, cx, foot } from './entities.js';
 import { Pawn, JOBS } from './pawn.js';
 import { BUILDINGS, NATURE, FX, ICONS, TILE } from '../data/art.js';
-import { img } from '../engine/assets.js';
+import { img, drawFrame } from '../engine/assets.js';
 import { KINGDOMS, mod, loadMeta } from '../data/kingdoms.js';
 import { makeHero, SUMMON_COST, FREE_SUMMONS, TEAM_SIZE, BASE_ROSTER, levelCost, MAX_LEVEL, addXp, xpToLevel, injure } from '../game/heroes.js';
 import { REGIONS, HERO_CLASSES, MONSTER_HEROES, ENEMIES } from '../data/units.js';
 import { Raid, planRaid, planSiege, raidPower } from '../battle/raid.js';
 import { power } from '../game/heroes.js';
+
+// Resource trips: pawns sail to nearby islands for a haul. Escorts make ambushes less likely and less deadly.
+export const TRIPS = {
+  grove: { name: 'Pine Isle', res: 'wood', per: 70, mins: 6, danger: 0.25 },
+  mine:  { name: 'Gold Reef', res: 'gold', per: 45, mins: 10, danger: 0.4 },
+  pasture: { name: 'Sheep Cay', res: 'meat', per: 60, mins: 8, danger: 0.3 },
+};
 
 const FIRST_RAID = 240, RAID_GAP = [360, 600], RAID_WARN = 90, GUARD_CAP = 3;
 
@@ -36,7 +43,7 @@ export class World {
     this.time = 0; this.hungry = false; this.eatT = 0; this.arriveT = 0; this.sheepT = 0;
     this.placing = null;
     this.heroes = []; this.team = []; this.guards = []; this.freeSummons = FREE_SUMMONS; this.defeated = []; this.hall = [];
-    this.raid = null; this.raidAt = null; this.raidPlan = null;
+    this.raid = null; this.raidAt = null; this.raidPlan = null; this.trips = [];
     this.campaign = { region: 0, stage: 1, best: 0 };
     this.era = { started: Date.now(), sieges: 0, won: false, endless: false, raidsWon: 0, raidsLost: 0 };
     this.castleHp = null; this.siegeAt = null;
@@ -69,7 +76,7 @@ export class World {
     if (save) {
       this.res = { ...this.res, ...save.res };
       this.jobs = { ...this.jobs, ...save.jobs };
-      pawnCount = save.pawns ?? pawnCount;
+      pawnCount = (save.pawns ?? pawnCount);
       buildings = save.buildings ?? buildings;
       save.trees?.forEach((s, i) => { if (this.trees[i]) { this.trees[i].stock = s[0]; this.trees[i].regrow = s[1]; } });
       save.stones?.forEach((s, i) => { if (this.stones[i]) { this.stones[i].stock = s[0]; this.stones[i].regrow = s[1]; } });
@@ -81,6 +88,7 @@ export class World {
       this.defeated = save.defeated ?? [];
       this.hall = save.hall ?? [];
       this.era = { ...this.era, ...save.era };
+      this.trips = save.trips ?? [];
       if (save.siegeIn != null) this.siegeAt = save.siegeIn;
       this.campaign = { ...this.campaign, ...save.campaign };
     }
@@ -110,6 +118,58 @@ export class World {
   }
 
   // ---------------------------------------------------------------- economy
+  // ---------------------------------------------------------------- resource trips
+  get escorting() { return this.trips.flatMap((t) => t.escorts); }
+  get pawnsAway() { return this.trips.reduce((s, t) => s + t.pawns, 0); }
+
+  startTrip(kind, pawns, escortIds) {
+    const T0 = TRIPS[kind]; if (!T0) return false;
+    if (pawns < 1 || this.idleCount < pawns) { this.events.toast?.('Not enough free pawns — unassign some in Pawns'); return false; }
+    // remove idle pawns from the island; they walk to the shore and sail off
+    for (let i = 0; i < pawns; i++) {
+      const p = this.pawns.find((x) => x.job === 'idle') || this.pawns[this.pawns.length - 1];
+      p.release(); this.pawns = this.pawns.filter((x) => x !== p); this.fx(FX.splash, p.px, p.py);
+    }
+    const escorts = escortIds.filter((id) => this.hero(id) && !this.escorting.includes(id));
+    this.team = this.team.filter((id) => !escorts.includes(id));
+    this.guards = this.guards.filter((id) => !escorts.includes(id));
+    this.trips.push({ kind, pawns, escorts, left: T0.mins * 60, total: T0.mins * 60 });
+    this.assignJobs();
+    this.events.toast?.(`${pawns} pawn${pawns > 1 ? 's' : ''} set sail for ${T0.name}`);
+    this.save();
+    return true;
+  }
+
+  tripTick(dt) {
+    for (const t of [...this.trips]) {
+      t.left -= dt;
+      if (t.left <= 0) this.finishTrip(t);
+    }
+  }
+
+  finishTrip(t) {
+    const T0 = TRIPS[t.kind];
+    this.trips = this.trips.filter((x) => x !== t);
+    const escorts = t.escorts.map((id) => this.hero(id)).filter(Boolean);
+    const guard = escorts.reduce((s, h) => s + power(h), 0);
+    const threat = 60 + this.campaign.best * 45;
+    const ambushChance = Math.max(0.05, T0.danger * (1 - Math.min(0.85, guard / threat)));
+    let haul = Math.round(T0.per * t.pawns * (1 + this.campaign.best * 0.08)), lost = 0, msg;
+    if (Math.random() < ambushChance) {
+      const beaten = guard >= threat * 0.6;
+      if (beaten) { haul = Math.round(haul * 0.8); msg = `Ambushed on the way home, but the escort fought them off!`; for (const h of escorts) if (Math.random() < 0.4) injure(h, true); }
+      else { lost = Math.min(t.pawns, 1 + Math.floor(Math.random() * t.pawns)); haul = Math.round(haul * 0.4); msg = `Ambushed! ${lost} pawn${lost > 1 ? 's' : ''} didn't make it back.`; for (const h of escorts) injure(h); }
+    }
+    this.res[T0.res] += haul;
+    const back = t.pawns - lost, d = this.castle.door;
+    for (let i = 0; i < back; i++) { const p = new Pawn(this, d.x, d.y + 1, this.color); this.pawns.push(p); if (this.raid && !this.raid.over) p.shelter(); }
+    this.assignJobs();
+    this.events.toast?.(`Boat back from ${T0.name}: +${haul} ${T0.res}. ${msg || ''}`, 4000);
+    this.events.changed?.();
+    this.save();
+    return { haul, lost, res: T0.res, name: T0.name };
+  }
+
   get pawnCap() {
     return 4 + this.buildings.filter((b) => b.working && b.def.pawns).reduce((s, b) => s + b.def.pawns, 0);
   }
@@ -318,6 +378,7 @@ export class World {
   get guardCap() { return GUARD_CAP; }
 
   toggleGuard(id) {
+    if (this.escorting.includes(id)) { this.events.toast?.('That hero is away escorting a boat'); return; }
     if (this.guards.includes(id)) this.guards = this.guards.filter((x) => x !== id);
     else if (this.guards.length < GUARD_CAP) { this.guards.push(id); this.team = this.team.filter((x) => x !== id); }
     else { this.events.toast?.(`Up to ${GUARD_CAP} guards`); return; }
@@ -325,6 +386,7 @@ export class World {
   }
 
   toggleTeam(id) {
+    if (this.escorting.includes(id)) { this.events.toast?.('That hero is away escorting a boat'); return; }
     if (!this.team.includes(id)) this.guards = this.guards.filter((x) => x !== id);
     if (this.team.includes(id)) this.team = this.team.filter((x) => x !== id);
     else if (this.team.length < TEAM_SIZE) this.team.push(id);
@@ -621,7 +683,7 @@ export class World {
     this.arriveT += dt;
     if (this.arriveT > 15) {
       this.arriveT = 0;
-      if (this.pawns.length < this.pawnCap && this.res.meat >= PAWN_COST + 5) {
+      if (this.pawns.length + this.pawnsAway < this.pawnCap && this.res.meat >= PAWN_COST + 5) {
         this.res.meat -= PAWN_COST;
         const d = this.castle.door;
         const p = new Pawn(this, d.x, d.y, this.color);
@@ -635,6 +697,7 @@ export class World {
 
     this.updateRaids(dt);
     this.recoveryTick(dt);
+    this.tripTick(dt);
 
     // idle gold from campaign progress
     this.campGold = (this.campGold || 0) + this.campaignRate / 60 * dt;
@@ -680,6 +743,15 @@ export class World {
       const b = this.moving.b;
       ctx.fillStyle = this.moving.ok ? 'rgba(120,255,140,.28)' : 'rgba(255,80,80,.32)';
       for (const c of b.cells()) ctx.fillRect(c.x * T + 2, c.y * T + 2, T - 4, T - 4);
+    }
+    if (this.trips.length && this.duck) {
+      const spots = this.duck.waterSpots();
+      this.trips.forEach((t, i) => {
+        const sp = spots[(i * 7 + 3) % spots.length]; if (!sp) return;
+        const back = t.left < 20 || t.left > t.total - 20;
+        if (!back) return;
+        drawFrame(ctx, FX.boat, Math.floor(this.time * 8), cx(sp.x), foot(sp.y) + Math.sin(this.time * 2) * 3);
+      });
     }
     this.drawClouds(ctx);
     for (const e of this.effects) if (e instanceof FloatText) e.draw(ctx);
@@ -735,7 +807,7 @@ export class World {
       v: 2, t: Date.now(), kingdom: this.kingdom, seed: this.seed, castleAt: { x: this.castle.x, y: this.castle.y },
       res: this.res, jobs: this.jobs, pawns: this.pawns.length,
       buildings: this.buildings.filter((b) => b !== this.castle).map((b) => ({ type: b.type, x: b.x, y: b.y, progress: b.progress, variant: b.variant, wrecked: !!b.wrecked })),
-      hall: this.hall, era: this.era, boosts: this.boosts, runOver: this.runOver || null, legacyBanked: !!this.legacyBanked, siegeIn: this.siegeAt == null ? null : Math.max(20, this.siegeAt - this.time),
+      hall: this.hall, era: this.era, trips: this.trips, boosts: this.boosts, runOver: this.runOver || null, legacyBanked: !!this.legacyBanked, siegeIn: this.siegeAt == null ? null : Math.max(20, this.siegeAt - this.time),
       trees: this.trees.map((t) => [t.stock, Math.round(t.regrow)]),
       stones: this.stones.map((s) => [s.stock, Math.round(s.regrow)]),
       sheep: this.sheep.length,
@@ -776,6 +848,8 @@ export class World {
       b.progress = Math.min(1, b.progress + used / b.def.build); buildTime -= used;
     }
     this.recoveryTick(capped);
+    const trips = [];
+    for (const t of [...this.trips]) { t.left -= capped; if (t.left <= 0) trips.push(this.finishTrip(t)); }
     // a siege never plays out while you're away: it waits at the shore and gives you a minute to prepare
     let siegeWaiting = false;
     if (this.siegeAt != null) {
@@ -794,6 +868,6 @@ export class World {
         raids.push(this.resolveOfflineRaid());
       }
     }
-    return { seconds: capped, gain, capped: seconds > capped, capH, raids, siegeWaiting };
+    return { seconds: capped, gain, capped: seconds > capped, capH, raids, siegeWaiting, trips };
   }
 }

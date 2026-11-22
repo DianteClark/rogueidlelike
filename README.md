@@ -39,6 +39,7 @@ Add `#reset` to the end of the URL once to wipe your save (`#reset&seed=123` to 
 - Winning the first siege wins the Era: end the run and collect Legacy, or continue into Endless where sieges keep coming, stronger each time
 - Run summary with Legacy earned and a Share button (builds an image card and opens the iPhone share sheet). Retire any time from the castle
 - Legacy shop on the kingdom screen: unlock kingdoms (Red 150, Yellow 300, Purple 500, Black 800, Beast 1000) and buy permanent starting boosts (Settlers, Supply cache, Banner call, Stewards, Masonry)
+- Boat trips (Pawns panel): send unassigned pawns to Pine Isle, Gold Reef or Sheep Cay for a big haul. Up to 3 hero escorts make ambushes rarer; an unguarded ambush can cost pawns. Boats show at the shore when leaving and returning
 - Pan / pinch-zoom camera, tap buildings and pawns
 - Autosave and "While you were away" offline earnings (up to 12h)
 

@@ -49,7 +49,7 @@ export class Raid {
   async prepare() {
     const w = this.world, srcs = new Set();
     for (const id of this.plan.enemies) { collectSrcs(ENEMIES[id].art, srcs); if (ENEMIES[id].projectile) srcs.add(ENEMIES[id].projectile.src); }
-    this.defenders = this.plan.tier === 'siege' ? w.heroes.filter(canFight) : w.guardHeroes.filter(canFight);
+    this.defenders = (this.plan.tier === 'siege' ? w.heroes.filter(canFight) : w.guardHeroes.filter(canFight)).filter((h) => !w.escorting.includes(h.id));
     for (const h of this.defenders) { const c = heroDef(h.cls); collectSrcs(c.art(h.color), srcs); if (c.projectile) srcs.add(c.projectile.src); }
     srcs.add(`${FREE}Units/Blue Units/Archer/Arrow.png`);
     collectSrcs(FX, srcs);

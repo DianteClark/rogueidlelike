@@ -3,6 +3,7 @@ import { BUILDINGS, ICONS, buildingArt, WAR, FREE } from '../data/art.js';
 import { JOBS } from '../world/pawn.js';
 import { heroStats, power, levelCost, className, avatarOf, groupName, TEAM_SIZE, MAX_LEVEL, xpToLevel, stateLabel } from '../game/heroes.js';
 import { teamSynergies } from '../game/synergy.js';
+import { TRIPS } from '../world/world.js';
 import { rarity, REGIONS, ENEMIES, stageEnemies } from '../data/units.js';
 
 const $ = (s) => document.querySelector(s);
@@ -128,8 +129,20 @@ export class Hud {
       </div>`).join('');
     const food = w.hungry ? '<b style="color:#b13a2c">Out of food — pawns work slower.</b>' :
       `Each pawn eats meat. New pawns arrive when there is room and food.`;
-    return `<h2>Pawns ${w.pawns.length}/${w.pawnCap}</h2>
-      <p>${w.idleCount} unassigned. ${food}</p>${rows}`;
+    const sel = this.tripSel || (this.tripSel = { kind: 'grove', pawns: 1, escorts: [] });
+    const trips = w.trips.map((t) => `<div class="row"><div class="name">⛵ ${TRIPS[t.kind].name}<small>${t.pawns} pawn${t.pawns > 1 ? 's' : ''}${t.escorts.length ? ' · ' + t.escorts.length + ' escort' + (t.escorts.length > 1 ? 's' : '') : ' · no escort'}</small></div>
+      <div class="count" style="font-size:16px">${Math.floor(t.left / 60)}:${String(Math.floor(t.left % 60)).padStart(2, '0')}</div></div>`).join('');
+    const free = w.heroes.filter((h) => h.state !== 'critical' && !w.escorting.includes(h.id) && !w.guards.includes(h.id));
+    const tripUi = w.campaign.best < 1 ? '<p class="muted">Win your first battle to unlock boat trips to nearby islands.</p>' : `
+      <div class="chips">${Object.entries(TRIPS).map(([k, t]) => `<button class="chip ${sel.kind === k ? 'on' : ''}" data-act="tripkind" data-arg="${k}">${t.name} · ${t.res} · ${t.mins}m</button>`).join('')}</div>
+      <div class="row"><div class="name">Pawns aboard<small>Unassigned pawns only</small></div>
+        <button class="sbtn red" data-act="trippawns" data-arg="-1">−</button><div class="count">${sel.pawns}</div><button class="sbtn" data-act="trippawns" data-arg="1">+</button></div>
+      <p style="margin:6px 0 2px">Escorts (fewer ambushes):</p>
+      <div class="chips">${free.map((h) => `<button class="chip ${sel.escorts.includes(h.id) ? 'on' : ''}" data-act="tripescort" data-arg="${h.id}">${h.name} Lv${h.level}</button>`).join('') || '<span class="muted">No free heroes</span>'}</div>
+      <button class="sbtn wbtn" style="width:100%;height:52px;margin-top:6px" data-act="tripgo" ${w.idleCount < sel.pawns ? 'disabled' : ''}>Set sail (~${Math.round(TRIPS[sel.kind].per * sel.pawns * (1 + w.campaign.best * 0.08))} ${TRIPS[sel.kind].res})</button>`;
+    return `<h2>Pawns ${w.pawns.length}/${w.pawnCap}${w.pawnsAway ? ` (+${w.pawnsAway} at sea)` : ''}</h2>
+      <p>${w.idleCount} unassigned. ${food}</p>${rows}
+      <h2 style="margin-top:12px">Boat trips</h2>${trips}${tripUi}`;
   }
 
   panel_build() {
@@ -166,7 +179,7 @@ export class Hud {
     const teamPower = w.team.map((id) => w.hero(id)).filter(Boolean).reduce((s, h) => s + power(h), 0);
     const cards = [...w.heroes].sort((a, b) => power(b) - power(a)).map((h) => `
       <button class="hcard" style="--rc:${rarity(h.rarity).color}" data-act="hero" data-arg="${h.id}">
-        ${w.team.includes(h.id) ? '<span class="intm">Team</span>' : w.guards.includes(h.id) ? '<span class="intm" style="background:#a0662f">Guard</span>' : ''}
+        ${w.team.includes(h.id) ? '<span class="intm">Team</span>' : w.guards.includes(h.id) ? '<span class="intm" style="background:#a0662f">Guard</span>' : w.escorting.includes(h.id) ? '<span class="intm" style="background:#2f7a8a">At sea</span>' : ''}
         <img src="${enc(avatarOf(h))}" alt="">
         <div class="lv">Lv ${h.level}</div><div class="cls">${className(h)}</div>
         ${h.state === 'wounded' || h.state === 'critical' ? `<div class="hurt ${h.state}">${h.state === 'critical' ? (h.inMonastery ? 'Healing' : 'Critical') : 'Wounded'}</div>` : ''}
@@ -284,6 +297,7 @@ export class Hud {
     this.awayHtml = `<h2>While you were away</h2>
       <p>${h ? h + 'h ' : ''}${m}m passed${sum.capped ? ` (max ${sum.capH}h counted)` : ''}. Your pawns kept working:</p>
       <div class="row" style="justify-content:center;font-size:20px">${items}</div>
+      ${(sum.trips || []).map((t) => `<p>⛵ A boat came back from ${t.name}: +${t.haul} ${t.res}${t.lost ? `, but ${t.lost} pawn${t.lost > 1 ? 's were' : ' was'} lost` : ''}.</p>`).join('')}
       ${sum.siegeWaiting ? '<p><b style="color:#a33a2c">A Blood Moon horde waits at your shore! You have one minute to prepare.</b></p>' : ''}
       ${(sum.raids || []).map((r) => `<p>${r.won ? `⚔ Your guards beat off a raid (+${r.gold} gold).` : `⚔ Raiders hit the island and took ${Object.entries(r.lost).map(([k, n]) => n + ' ' + k).join(', ')}.${r.pawns ? ` ${r.pawns} pawn${r.pawns > 1 ? 's' : ''} lost.` : ''}${r.wrecked ? ` The ${r.wrecked} was wrecked.` : ''} Guards and towers help!`}</p>`).join('')}
       <div style="text-align:center;margin-top:8px"><button class="sbtn wbtn" data-act="closepanel">Collect</button></div>`;
@@ -306,6 +320,10 @@ export class Hud {
     if (a === 'team') { w.toggleTeam(arg); this.render(); }
     if (a === 'guard') { w.toggleGuard(arg); this.render(); }
     if (a === 'monastery') { w.toggleMonastery(arg); this.render(); }
+    if (a === 'tripkind') { this.tripSel.kind = arg; this.render(); }
+    if (a === 'trippawns') { this.tripSel.pawns = Math.max(1, Math.min(6, this.tripSel.pawns + Number(arg))); this.render(); }
+    if (a === 'tripescort') { const e = this.tripSel.escorts; this.tripSel.escorts = e.includes(arg) ? e.filter((x) => x !== arg) : [...e, arg].slice(0, 3); this.render(); }
+    if (a === 'tripgo') { if (w.startTrip(this.tripSel.kind, this.tripSel.pawns, this.tripSel.escorts)) { this.tripSel.escorts = []; this.render(); } }
     if (a === 'share') import('./runScreens.js').then((m) => m.shareCard(w, w.runSummary('sharing')));
     if (a === 'retire') {
       if (this.confirmRetire && Date.now() - this.confirmRetire < 4000) { this.close(); w.endRun('retired'); }
