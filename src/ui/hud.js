@@ -33,7 +33,7 @@ export class Hud {
   refresh() {
     const w = this.world; if (!w) return;
     const r = w.res;
-    const fmt = (n) => n >= 10000 ? (n / 1000).toFixed(n >= 100000 ? 0 : 1) + 'k' : String(Math.floor(n));
+    const fmt = (n) => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + 'k' : String(Math.floor(n));
     $('#res-wood span').textContent = fmt(r.wood);
     $('#res-gold span').textContent = fmt(r.gold);
     $('#res-meat span').textContent = fmt(r.meat);

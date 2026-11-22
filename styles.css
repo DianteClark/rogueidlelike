@@ -53,20 +53,19 @@ img { image-rendering: pixelated; }
   top: calc(var(--safe-top) + 14px);
   left: calc(var(--safe-left) + 8px);
   right: calc(var(--safe-right) + 8px);
-  display: grid; grid-template-columns: repeat(4, 1fr) 44px; gap: 6px;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) 44px; gap: 5px;
   pointer-events: none;
 }
 .res {
   display: flex; align-items: center; gap: 2px;
-  height: 40px; padding: 0 10px 0 2px;
-  border: 20px solid transparent;
-  border-width: 14px 14px;
-  border-image: url('assets/ui/paper.png') 64 fill / 14px stretch;
-  font-weight: 700; font-size: 17px;
-  white-space: nowrap;
+  height: 40px; padding: 0;
+  border: 12px solid transparent; border-width: 12px 8px;
+  border-image: url('assets/ui/paper.png') 64 fill / 12px 8px stretch;
+  font-weight: 700; font-size: 15px;
+  white-space: nowrap; min-width: 0;
 }
-.res img { width: 34px; height: 34px; margin: -10px -2px -10px -10px; object-fit: contain; }
-.res span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.res img { width: 30px; height: 30px; margin: -8px 0 -8px -4px; object-fit: contain; flex: none; }
+.res span { min-width: 0; overflow: hidden; }
 .res.bump span { animation: bump .25s ease-out; }
 @keyframes bump { 50% { transform: scale(1.25); } }
 
