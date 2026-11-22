@@ -1,12 +1,10 @@
+/* BoldPixels by YukiPixels — CC BY-SA 4.0 (see assets/fonts/BoldPixels-LICENSE.txt) */
 @font-face {
-  font-family: 'Pixelify';
-  src: url('assets/fonts/pixelify-sans-latin-400-normal.woff2') format('woff2');
-  font-weight: 400;
-}
-@font-face {
-  font-family: 'Pixelify';
-  src: url('assets/fonts/pixelify-sans-latin-700-normal.woff2') format('woff2');
-  font-weight: 700;
+  font-family: 'BoldPixels';
+  src: url('assets/fonts/boldpixels.woff2') format('woff2'),
+       url('assets/fonts/boldpixels.woff') format('woff');
+  font-weight: 100 900;
+  font-style: normal;
 }
 
 :root {
@@ -23,7 +21,8 @@
 html, body {
   margin: 0; height: 100%; overflow: hidden;
   background: var(--water);
-  font-family: 'Pixelify', system-ui, sans-serif;
+  font-family: 'BoldPixels', system-ui, sans-serif;
+  font-synthesis: none;
   color: var(--ink);
   -webkit-user-select: none; user-select: none;
   -webkit-touch-callout: none;

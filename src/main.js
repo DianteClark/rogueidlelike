@@ -37,7 +37,7 @@ async function boot() {
   const fill = document.getElementById('loadfill');
   await Promise.all([
     loadAll(common, (p) => { fill.style.width = Math.round(p * 90) + '%'; }),
-    document.fonts?.load('700 16px Pixelify').catch(() => {}),
+    document.fonts?.load('16px BoldPixels').catch(() => {}),
   ]);
 
   if (location.hash === '#reset') { localStorage.removeItem(SAVE_KEY); history.replaceState(null, '', location.pathname); }

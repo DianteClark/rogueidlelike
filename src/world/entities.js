@@ -159,7 +159,7 @@ export class FloatText {
     const a = Math.min(1, (1.3 - this.t) * 3), y = this.y - 30 - this.t * 34;
     ctx.globalAlpha = a;
     if (this.icon) { const im = img(this.icon); if (im) ctx.drawImage(im, this.x - 40, y - 30, 40, 40); }
-    ctx.font = 'bold 26px Pixelify, sans-serif';
+    ctx.font = '28px BoldPixels, sans-serif';
     ctx.lineWidth = 6; ctx.strokeStyle = '#2a2420'; ctx.fillStyle = '#fff6d8';
     ctx.strokeText(this.text, this.x, y); ctx.fillText(this.text, this.x, y);
     ctx.globalAlpha = 1;

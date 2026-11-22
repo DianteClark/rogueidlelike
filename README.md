@@ -2,6 +2,7 @@
 
 An idle hero collector, kingdom builder and roguelite for iPhone, played as a home-screen web app.
 Art by [Pixel Frog — Tiny Swords](https://pixelfrog-assets.itch.io/tiny-swords) (Free Pack, Enemy Pack, Warfare).
+Font: **BoldPixels by YukiPixels**, licensed [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) (unchanged).
 
 See **[DESIGN.md](DESIGN.md)** for the full game design and build order.
 
