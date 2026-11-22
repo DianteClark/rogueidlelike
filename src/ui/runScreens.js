@@ -28,6 +28,7 @@ export class RunScreens {
       <div class="btnrow"><button class="sbtn wbtn" data-run="end">End run & collect</button><button class="sbtn wbtn" data-run="endless">Continue into Endless</button></div>`);
     el.onclick = (e) => {
       const b = e.target.closest('[data-run]'); if (!b) return;
+      w.era.choicePending = false;
       if (b.dataset.run === 'endless') { w.era.endless = true; w.save(); el.classList.add('hidden'); this.game.hud.toast('Endless mode! Survive as many sieges as you can.', 3500); }
       else { el.classList.add('hidden'); w.endRun('ended'); }
     };
@@ -60,7 +61,7 @@ export class RunScreens {
     el.onclick = (e) => {
       const b = e.target.closest('[data-run]'); if (!b) return;
       if (b.dataset.run === 'share') shareCard(w, s);
-      if (b.dataset.run === 'new') { localStorage.removeItem(SAVE_KEY); location.hash = ''; location.reload(); }
+      if (b.dataset.run === 'new') { w.discarded = true; this.game.started = false; localStorage.removeItem(SAVE_KEY); location.hash = ''; location.reload(); }
     };
   }
 }

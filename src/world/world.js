@@ -90,6 +90,7 @@ export class World {
       this.era = { ...this.era, ...save.era };
       this.trips = save.trips ?? [];
       if (save.siegeIn != null) this.siegeAt = save.siegeIn;
+      this.siegeLive = save.siegeLive || null;
       this.campaign = { ...this.campaign, ...save.campaign };
     }
     if (save?.castleAt && this.canPlaceAfterLoad !== false) this.relocate(this.castle, save.castleAt.x, save.castleAt.y);
@@ -328,7 +329,11 @@ export class World {
     b.wrecked = true; b.repair = 0;
     this.fx(FX.explosion, cx(b.x + b.w / 2 - 0.5), foot(b.y));
     this.events.toast?.(`The ${b.name} was wrecked! Builders can repair it.`, 3000);
-    if (b.def.beds) for (const h of [...this.heroes]) if (h.inMonastery) this.fallHero(h);
+    if (b.def.beds) {
+      const patients = this.heroes.filter((h) => h.inMonastery);
+      const excess = Math.max(0, patients.length - this.bedCount);
+      for (const h of patients.slice(0, excess)) this.fallHero(h);
+    }
     this.events.changed?.();
     return true;
   }
@@ -353,8 +358,14 @@ export class World {
         if (h.recover <= 0) { h.state = 'healthy'; h.recover = 0; changed = true; }
       } else if (h.state === 'critical') {
         // a Monastery bed heals fast; outside one, critical heroes mend very slowly
-        h.recover -= dt * (h.inMonastery ? this.mod('recovery') : 0.2);
-        if (h.recover <= 0) { h.state = 'wounded'; h.recover = 45; h.inMonastery = false; changed = true; this.events.toast?.(`${h.name} is back on their feet`); }
+        const rate = h.inMonastery ? this.mod('recovery') : 0.2;
+        h.recover -= dt * rate;
+        if (h.recover <= 0) {
+          const spare = -h.recover / rate;            // real seconds left over after recovering
+          h.state = 'wounded'; h.recover = Math.max(0, 45 - spare); h.inMonastery = false; changed = true;
+          if (h.recover <= 0) { h.state = 'healthy'; h.recover = 0; }
+          this.events.toast?.(`${h.name} is back on their feet`);
+        }
       }
     }
     if (changed) this.events.changed?.();
@@ -473,7 +484,7 @@ export class World {
   hitCastle(dmg) {
     if (this.castleHp == null) this.castleHp = this.castleMax;
     this.castleHp = Math.max(0, this.castleHp - dmg);
-    if (this.castleHp <= 0 && !this.fallen) { this.fallen = true; this.endRun('fallen'); }
+    if (this.castleHp <= 0 && !this.fallen) { this.fallen = true; if (this.raid) this.raid.over = 'fallen'; this.endRun('fallen'); }
   }
 
   get siegeCountdown() { return this.siegeAt == null ? null : Math.max(0, this.siegeAt - this.time); }
@@ -484,6 +495,12 @@ export class World {
   }
 
   updateSieges() {
+    if (this.siegeLive && !this.raid && !this.raidStarting && !this.busy) {
+      const live = this.siegeLive; this.siegeLive = null;
+      this.startRaid(live.plan).then(() => { if (live.castleHp != null) this.castleHp = live.castleHp; });
+      this.events.toast?.('The Blood Moon siege rages on!', 3000);
+      return;
+    }
     if (this.campaign.best < 10 && !this.era.endless) return;   // the Blood Moon rises once the Goblin Coast falls
     if (this.siegeAt == null) { this.scheduleSiege(600); this.events.toast?.('The Troll\'s horde swears revenge. A Blood Moon siege comes in 10 minutes!', 5000); return; }
     const left = this.siegeAt - this.time;
@@ -493,7 +510,7 @@ export class World {
       this.siegeWarned = mark;
       this.events.toast?.(`Blood Moon siege in ${mark >= 60 ? mark / 60 + ' min' : mark + 's'}! Every hero will defend the castle.`, 3500);
     }
-    if (left <= 0 && !this.raid && !this.raidStarting) this.startRaid(planSiege(this));
+    if (left <= 0 && !this.raid && !this.raidStarting && !this.busy) this.startRaid(planSiege(this));
   }
 
   // Ends the run: fallen castle, retirement, or a won Era cashed in.
@@ -531,7 +548,7 @@ export class World {
           this.res.gold += g; this.freeSummons += 2;
           this.castleHp = null;
           this.scheduleSiege((1800 + Math.random() * 900) / this.mod('raidRate'));
-          if (!this.era.won) { this.era.won = true; setTimeout(() => this.events.eraWon?.(), 2500); }
+          if (!this.era.won) { this.era.won = true; this.era.choicePending = true; setTimeout(() => this.events.eraWon?.(), 2500); }
           else setTimeout(() => this.events.toast?.(`Siege ${this.era.sieges} survived! +${g} gold, +2 recruits`, 4000), 2000);
         }
         const lost = Object.entries(r.stolen).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${k}`).join(', ');
@@ -557,7 +574,7 @@ export class World {
       this.raidWarned = true;
       this.events.toast?.(this.raidPlan.tier === 'real' ? `A BIG ${this.raidPlan.tribe} raid is coming in ${Math.ceil(left)}s! Pawns left outside can die and buildings can burn.` : `${this.raidPlan.tribe} sighted! Raid in ${Math.ceil(left)}s — assign guards in Heroes, build towers`, 4500);
     }
-    if (left <= 0 && !this.raidStarting) this.startRaid();
+    if (left <= 0 && !this.raidStarting && !this.busy) this.startRaid();
   }
 
   async startRaid(plan) {
@@ -824,12 +841,16 @@ export class World {
   }
 
   // ---------------------------------------------------------------- save / offline
+  // where a building really is (the spot it was picked up from, if it's being dragged right now)
+  restingPos(b) { return this.moving?.b === b ? { ...this.moving.from } : { x: b.x, y: b.y }; }
+
   serialize() {
     return {
-      v: 2, t: Date.now(), kingdom: this.kingdom, seed: this.seed, castleAt: { x: this.castle.x, y: this.castle.y },
+      v: 2, t: Date.now(), kingdom: this.kingdom, seed: this.seed, castleAt: this.restingPos(this.castle),
       res: this.res, jobs: this.jobs, pawns: this.pawns.length,
-      buildings: this.buildings.filter((b) => b !== this.castle).map((b) => ({ type: b.type, x: b.x, y: b.y, progress: b.progress, variant: b.variant, wrecked: !!b.wrecked })),
+      buildings: this.buildings.filter((b) => b !== this.castle).map((b) => ({ type: b.type, ...this.restingPos(b), progress: b.progress, variant: b.variant, wrecked: !!b.wrecked })),
       hall: this.hall, era: this.era, trips: this.trips, boosts: this.boosts, runOver: this.runOver || null, legacyBanked: !!this.legacyBanked, siegeIn: this.siegeAt == null ? null : Math.max(20, this.siegeAt - this.time),
+      siegeLive: this.raid?.plan.tier === 'siege' && !this.raid.over ? { castleHp: this.castleHp, plan: this.raid.plan } : null,
       trees: this.trees.map((t) => [t.stock, Math.round(t.regrow)]),
       stones: this.stones.map((s) => [s.stock, Math.round(s.regrow)]),
       sheep: this.sheep.length,
@@ -839,6 +860,7 @@ export class World {
   }
 
   save() {
+    if (this.discarded) return;
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(this.serialize())); } catch (e) { /* storage full or private mode */ }
   }
 
@@ -874,14 +896,15 @@ export class World {
     for (const t of [...this.trips]) { t.left -= capped; if (t.left <= 0) trips.push(this.finishTrip(t)); }
     // a siege never plays out while you're away: it waits at the shore and gives you a minute to prepare
     let siegeWaiting = false;
-    if (this.siegeAt != null) {
+    const live = this.raid || this.raidStarting;
+    if (this.siegeAt != null && !live) {
       const left = this.siegeAt - this.time;
       if (capped >= left) { this.siegeAt = this.time + 60; this.siegeWarned = 60; siegeWaiting = true; }
       else this.siegeAt -= capped;
     }
     // raids that came while you were away (sieges will wait for you; these don't)
     const raids = [];
-    if (this.campaign.best >= 1 && this.raidAt != null) {
+    if (this.campaign.best >= 1 && this.raidAt != null && !live) {
       let remaining = capped;
       while (raids.length < 3) {
         const left = Math.max(0, this.raidAt - this.time);

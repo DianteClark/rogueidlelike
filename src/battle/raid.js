@@ -100,7 +100,7 @@ export class Raid {
     const arrow = { src: `${FREE}Units/Blue Units/Archer/Arrow.png`, speed: 560, rotate: true };
     this.towers = w.buildings.filter((b) => b.type === 'tower' && b.working).map((b) => ({
       x: (b.x + 1) * T, y: (b.y + 1) * T - 150, cool: 0, range: 5.5 * T, atk: Math.round(14 * mod(k, 'defenseCost', 1) ** -1), b,
-      arrow, head: 0, dead: false, side: 'hero', s: { atk: 14, def: 0 }, flip: false,
+      arrow, head: 0, dead: false, side: 'hero', s: { atk: Math.round(14 / mod(k, 'defenseCost', 1)), def: 0 }, flip: false,
     }));
     return true;
   }
@@ -213,6 +213,7 @@ export class Raid {
     dmg = Math.max(1, dmg - (to.s.def || 0) * 0.5);
     if (to.shield > 0) { const a = Math.min(to.shield, dmg); to.shield -= a; dmg -= a; }
     to.hp -= dmg; to.flash = 1;
+    if (from.lifesteal && from.heal) from.heal(dmg * from.lifesteal, true);
     this.text(String(Math.round(dmg)), to.x, to.y - to.head, '#fff');
     if (to.hp <= 0) {
       to.dead = true; to.hp = 0; to.anim.t = 0;

@@ -162,6 +162,7 @@ async function boot() {
       const away = game.world.applyOffline((Date.now() - save.t) / 1000);
       if (away) hud.showAway(away);
     }
+    if (save.era?.choicePending && !save.runOver) runs.eraWon();
     if (save.runOver) { game.world.legacyBanked = save.legacyBanked; game.world.runOver = save.runOver; runs.runOver(save.runOver); }
   } else {
     await makeWorld('blue', null);
@@ -211,6 +212,7 @@ function startLoop() {
     if (game.world) {
       game.camera.update(dt);
       game.world.update(dt);
+      game.world.busy = !!(game.battle || game.starting || game.map);
       if (game.battle) { game.battle.update(dt); game.bhud.update(game.battle); renderBattle(); }
       else if (game.map) { game.map.update(dt); game.map.draw(ctx, canvas.clientWidth, canvas.clientHeight, game.dpr, game.safeTop); }
       else render();
