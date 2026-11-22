@@ -1,6 +1,6 @@
 // Things that live on the island: resource nodes, buildings, sheep, pawns, effects.
 import { Anim, drawFrame, img } from '../engine/assets.js';
-import { NATURE, FX, BUILDINGS, buildingSrc, TILE, pawnArt } from '../data/art.js';
+import { NATURE, FX, BUILDINGS, buildingArt, TILE, pawnArt } from '../data/art.js';
 
 const T = TILE;
 export const cx = (x) => x * T + T / 2;   // tile → world centre
@@ -63,13 +63,19 @@ export class GoldStone {
 
 // ---------------------------------------------------------------- buildings
 export class Building {
-  constructor(type, x, y, { progress = 1, variant = 0, color = 'Blue' } = {}) {
+  constructor(type, x, y, { progress = 1, variant = 0, color = 'Blue', set = null } = {}) {
     this.type = type; this.def = BUILDINGS[type];
     this.x = x; this.y = y; this.w = this.def.w; this.h = this.def.h;
-    this.progress = progress; this.variant = variant; this.color = color;
-    const file = this.def.variants ? this.def.variants[variant % this.def.variants.length] : this.def.file;
-    this.src = buildingSrc(file, color);
+    this.progress = progress; this.variant = variant; this.color = color; this.set = set;
+    this.art = buildingArt(type, { color, set, variant });
+    this.src = this.art.src; this.name = this.art.name; this.sink = this.art.sink;
     this.workers = 0;
+  }
+  // animated sheets (goblin hut smoke, cave eyes) get one frame per fw pixels
+  frameRect(im) {
+    const fw = this.art.fw || im.width, n = Math.max(1, Math.floor(im.width / fw));
+    const f = n > 1 ? Math.floor(performance.now() / 110) % n : 0;
+    return { sx: f * fw, fw };
   }
   get done() { return this.progress >= 1; }
   get door() { return { x: this.x + Math.floor(this.w / 2), y: this.y + 1 }; }
@@ -80,26 +86,28 @@ export class Building {
   }
   contains(wx, wy) {
     const im = img(this.src); if (!im) return false;
-    const left = (this.x + this.w / 2) * T - im.width / 2, bottom = (this.y + 1) * T + this.def.sink;
-    return wx >= left && wx <= left + im.width && wy >= bottom - im.height && wy <= bottom;
+    const { fw } = this.frameRect(im);
+    const left = (this.x + this.w / 2) * T - fw / 2, bottom = (this.y + 1) * T + this.sink;
+    return wx >= left && wx <= left + fw && wy >= bottom - im.height && wy <= bottom;
   }
   update() {}
   get sortY() { return (this.y + 1) * T - 4; }
   draw(ctx) {
     const im = img(this.src); if (!im) return;
-    const left = Math.round((this.x + this.w / 2) * T - im.width / 2);
-    const bottom = (this.y + 1) * T + this.def.sink;
-    if (this.done) { ctx.drawImage(im, left, bottom - im.height); return; }
+    const { sx, fw } = this.frameRect(im), h = im.height;
+    const left = Math.round((this.x + this.w / 2) * T - fw / 2);
+    const bottom = (this.y + 1) * T + this.sink;
+    if (this.done) { ctx.drawImage(im, sx, 0, fw, h, left, bottom - h, fw, h); return; }
     // under construction: faded silhouette, with the built part revealed from the bottom up
-    ctx.globalAlpha = 0.35; ctx.drawImage(im, left, bottom - im.height); ctx.globalAlpha = 1;
-    const shown = Math.floor(im.height * this.progress);
-    if (shown > 0) ctx.drawImage(im, 0, im.height - shown, im.width, shown, left, bottom - shown, im.width, shown);
+    ctx.globalAlpha = 0.35; ctx.drawImage(im, sx, 0, fw, h, left, bottom - h, fw, h); ctx.globalAlpha = 1;
+    const shown = Math.floor(h * this.progress);
+    if (shown > 0) ctx.drawImage(im, sx, h - shown, fw, shown, left, bottom - shown, fw, shown);
   }
   // progress bar for buildings under construction
   drawOver(ctx) {
     if (this.done) return;
     const im = img(this.src); if (!im) return;
-    const x = (this.x + this.w / 2) * T - 40, y = (this.y + 1) * T + this.def.sink - im.height - 14;
+    const x = (this.x + this.w / 2) * T - 40, y = (this.y + 1) * T + this.sink - im.height - 14;
     ctx.fillStyle = 'rgba(30,30,40,.6)'; ctx.fillRect(x, y, 80, 10);
     ctx.fillStyle = '#f5d76e'; ctx.fillRect(x + 2, y + 2, 76 * this.progress, 6);
   }

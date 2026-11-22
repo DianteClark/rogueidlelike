@@ -82,6 +82,25 @@ export const BUILDINGS = {
 };
 export const buildingSrc = (file, color = 'Blue') => `${FREE}Buildings/${color} Buildings/${file}`;
 
+// The Beast Horde builds with Enemy Pack structures instead of castles and keeps.
+const EX = `${ENEMY}Extra/`;
+export const BEAST_BUILDINGS = {
+  castle:    { name: 'Hollow Tree', src: `${EX}Dead Tree/Dead Tree.png`, sink: 5 },
+  house:     { name: 'Gnome Hut', src: `${EX}Gnome Buildings/Gnome Hut.png`, sink: 40 },
+  tower:     { name: 'Mushroom Tower', src: `${EX}Gnome Buildings/Gnome Tower.png`, sink: 26 },
+  barracks:  { name: 'Goblin Hut', src: `${EX}Goblin Hut/Goblin Hut.png`, fw: 256, sink: 15 },
+  archery:   { name: 'Lookout', src: `${EX}Pirate Tower/Pirate Tower_Ground.png`, sink: 13 },
+  monastery: { name: 'Shaman Cave', src: `${EX}Cave/Cave_Idle.png`, fw: 192, sink: 19 },
+};
+
+// Art for a building in a given colour or building set.
+export function buildingArt(type, { color = 'Blue', set = null, variant = 0 } = {}) {
+  const d = BUILDINGS[type];
+  if (set === 'beast' && BEAST_BUILDINGS[type]) return { ...BEAST_BUILDINGS[type] };
+  const file = d.variants ? d.variants[variant % d.variants.length] : d.file;
+  return { name: d.name, src: buildingSrc(file, color), sink: d.sink };
+}
+
 export const ICONS = {
   wood: `${FREE}UI Elements/UI Elements/Icons/Icon_02.png`,
   gold: `${FREE}UI Elements/UI Elements/Icons/Icon_03.png`,

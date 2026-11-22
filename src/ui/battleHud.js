@@ -1,6 +1,6 @@
 // Battle overlay: stage banner, King's Rally button with cut-in, speed toggle, retreat, results.
 import { KING_AVATAR, REGIONS } from '../data/units.js';
-import { KINGDOMS } from '../data/kingdoms.js';
+import { KINGDOMS, kingAvatar } from '../data/kingdoms.js';
 import { avatarOf, className } from '../game/heroes.js';
 import { ICONS } from '../data/art.js';
 
@@ -30,8 +30,8 @@ export class BattleHud {
     const color = KINGDOMS[this.game.world.kingdom].color;
     const R = REGIONS[b.regionIdx];
     $('bh-title').textContent = `${R.name} · ${b.stage === R.stages ? 'Boss' : 'Stage ' + b.stage}`;
-    $('bh-king').src = enc(KING_AVATAR(color));
-    $('cutin-img').src = enc(KING_AVATAR(color));
+    $('bh-king').src = enc(kingAvatar(this.game.world.kingdom));
+    $('cutin-img').src = enc(kingAvatar(this.game.world.kingdom));
     b.speed = this.game.battleSpeed || 1;
     $('bh-speed').textContent = 'x' + b.speed;
     $('bh-result').classList.add('hidden');

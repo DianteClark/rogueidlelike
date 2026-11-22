@@ -3,14 +3,14 @@ import { loadAll, collectSrcs } from './engine/assets.js';
 import { Camera } from './engine/camera.js';
 import { World, SAVE_KEY } from './world/world.js';
 import { newSeed } from './world/generate.js';
-import { KINGDOMS, loadMeta } from './data/kingdoms.js';
+import { KINGDOMS, loadMeta, kingAvatar } from './data/kingdoms.js';
 import { chooseKingdom } from './ui/kingdomSelect.js';
 import { Battle, ARENA_W, ARENA_H } from './battle/battle.js';
 import { REGIONS } from './data/units.js';
 import { BattleHud } from './ui/battleHud.js';
 import { MapScreen } from './ui/mapScreen.js';
 import { Hud } from './ui/hud.js';
-import { pawnArt, TERRAIN, NATURE, FX, BUILDINGS, buildingSrc, ICONS, TILE } from './data/art.js';
+import { pawnArt, TERRAIN, NATURE, FX, BUILDINGS, buildingArt, ICONS, TILE } from './data/art.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d', { alpha: false });
@@ -110,7 +110,8 @@ async function boot() {
   const previewSeed = seedHash ? Number(seedHash[1]) : newSeed();
   async function makeWorld(kingdom, saveData) {
     const ticket = ++building;
-    await loadAll(colorSrcs(KINGDOMS[kingdom].color));
+    await loadAll(colorSrcs(KINGDOMS[kingdom].color, KINGDOMS[kingdom].buildings));
+    await loadAll([kingAvatar(kingdom)]);
     if (ticket !== building) return; // a newer pick replaced this one
     const world = new World({
       toast: (m) => hud.toast(m),
@@ -183,11 +184,10 @@ async function boot() {
   setInterval(() => game.started && hud.raidTick(), 500);
 }
 
-function colorSrcs(color) {
+function colorSrcs(color, set) {
   const srcs = collectSrcs({ a: pawnArt(color) });
-  for (const d of Object.values(BUILDINGS)) {
-    srcs.add(buildingSrc(d.file, color));
-    d.variants?.forEach((v) => srcs.add(buildingSrc(v, color)));
+  for (const [type, d] of Object.entries(BUILDINGS)) {
+    for (let v = 0; v < (d.variants?.length || 1); v++) srcs.add(buildingArt(type, { color, set, variant: v }).src);
   }
   return srcs;
 }

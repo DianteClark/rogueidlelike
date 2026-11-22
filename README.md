@@ -16,7 +16,7 @@ See **[DESIGN.md](DESIGN.md)** for the full game design and build order.
 Add `#reset` to the end of the URL once to wipe your save (`#reset&seed=123` to try a specific island).
 
 ## What's in this build
-- Kingdom select: pick one of five colors, each with a combat passive, an island passive and a drawback (four unlock with Legacy)
+- Kingdom select: pick one of six kingdoms (five colours + the Beast Horde, each with a combat passive, an island passive and a drawback (four unlock with Legacy)
 - A new random island every run (seeded generator: plateau with stairs and gold, forest, sheep meadow, castle and house), built from the Tiny Swords tilemap rules (flat ground, plateau, cliffs, stairs, animated foam, shadows)
 - Pawns with jobs: Woodcutter, Miner, Shepherd, Builder. They walk, work, climb stairs and carry resources to the castle
 - Food: pawns eat meat; new pawns arrive when there's house room and food
@@ -30,6 +30,9 @@ Add `#reset` to the end of the URL once to wipe your save (`#reset&seed=123` to 
 - Campaign map: a sea chart of stage islands; after each fight choose Next stage, Map or Island (Retry after a loss)
 - Team bonuses: 2/3/4/5 heroes of one colour (or one monster tribe) unlock tiered bonuses; heroes matching your kingdom colour get +10% health and attack
 - Monster heroes: every monster you beat can join your summons (Rare or better); bosses are Legendary, sometimes Mythic
+- Beast Horde: a monster kingdom with a Hollow Tree instead of a castle, Gnome Huts, Mushroom Towers, Goblin Huts, a Lookout and a Shaman Cave; the Troll is its King; starts with goblin heroes, humans join after stage 5, beaten raiders may join
+- All kingdoms are unlocked for testing until runs and Legacy exist (`UNLOCK_ALL_FOR_TESTING` in src/data/kingdoms.js)
+- Units in battle stand on a coloured ring: yours vs the enemy's
 - Pan / pinch-zoom camera, tap buildings and pawns
 - Autosave and "While you were away" offline earnings (up to 12h)
 

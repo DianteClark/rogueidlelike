@@ -1,5 +1,5 @@
 // DOM overlay: resource bar, bottom nav, bottom-sheet panels, toasts.
-import { BUILDINGS, ICONS, buildingSrc, WAR, FREE } from '../data/art.js';
+import { BUILDINGS, ICONS, buildingArt, WAR, FREE } from '../data/art.js';
 import { JOBS } from '../world/pawn.js';
 import { heroStats, power, levelCost, className, avatarOf, groupName, TEAM_SIZE, MAX_LEVEL, xpToLevel } from '../game/heroes.js';
 import { teamSynergies } from '../game/synergy.js';
@@ -127,20 +127,20 @@ export class Hud {
 
   panel_build() {
     const w = this.world;
-    const rows = Object.entries(BUILDINGS).filter(([k]) => k !== 'castle').map(([k, d]) => `
+    const rows = Object.entries(BUILDINGS).filter(([k]) => k !== 'castle').map(([k, d]) => { const art = buildingArt(k, { color: w.color, set: w.buildSet }); return `
       <div class="row">
-        <img class="ic" src="${enc(buildingSrc(d.file, w.color))}" alt="">
-        <div class="name">${d.name}<small>${d.locked ? 'Coming soon' : d.pawns ? `+${d.pawns} pawn room` : ''}</small></div>
+        <span class="ic" style="width:44px;height:44px;margin:-6px -4px;background:url('${enc(art.src)}') 0 50%/${art.fw ? 'auto 100%' : 'contain'} no-repeat;display:inline-block"></span>
+        <div class="name">${art.name}<small>${d.locked ? 'Coming soon' : d.pawns ? `+${d.pawns} pawn room` : ''}</small></div>
         ${d.locked ? '' : this.costHtml(w.costOf(k))}
         <button class="sbtn wbtn" data-act="place" data-arg="${k}" ${d.locked || !w.canAfford(w.costOf(k)) ? 'disabled' : ''}>Build</button>
-      </div>`).join('');
+      </div>`; }).join('');
     return `<h2>Build</h2><p>Pick a building, then tap the island to place it. Builders will construct it.</p>${rows}`;
   }
 
   panel_placing() {
     const p = this.world.placing; if (!p) return '';
     const d = BUILDINGS[p.type];
-    return `<h2>Place ${d.name}</h2>
+    return `<h2>Place ${buildingArt(p.type, { color: this.world.color, set: this.world.buildSet }).name}</h2>
       <p>${p.ok ? 'Tap the island to move it.' : '<b style="color:#b13a2c">Can\'t build there.</b> Tap open flat ground.'}</p>
       <div class="row" style="justify-content:flex-end;gap:10px">
         ${this.costHtml(this.world.costOf(p.type))}
@@ -254,7 +254,7 @@ export class Hud {
     const extra = b.type === 'castle'
       ? `<p>The heart of your kingdom. Pawns bring resources here. If it falls in a siege, the run is over.</p>
          <button class="sbtn wbtn" data-act="open" data-arg="jobs">Manage pawns</button>` : '';
-    return `<h2>${b.def.name}</h2><p>${status}</p>${extra}`;
+    return `<h2>${b.name}</h2><p>${status}</p>${extra}`;
   }
 
   showBuilding(b) { this.inspect = b; this.open('building'); }

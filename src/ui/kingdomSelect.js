@@ -1,5 +1,5 @@
 // Start-of-run screen: pick a kingdom. Locked ones can be inspected; they unlock with Legacy.
-import { KINGDOMS, KINGDOM_ORDER } from '../data/kingdoms.js';
+import { KINGDOMS, KINGDOM_ORDER, kingAvatar } from '../data/kingdoms.js';
 import { WAR, FREE } from '../data/art.js';
 
 const enc = (s) => encodeURI(s);
@@ -15,7 +15,7 @@ export function chooseKingdom(meta, onPreview) {
   picks.innerHTML = KINGDOM_ORDER.map((id) => {
     const k = KINGDOMS[id], locked = !meta.unlocked.includes(id);
     return `<button class="kpick ${locked ? 'locked' : ''}" data-id="${id}" aria-label="${k.name}">
-      <img src="${enc(`${WAR}King/King Avatar/King_Avatar_0${k.avatar}.png`)}" alt="">
+      <img src="${enc(kingAvatar(id))}" alt="">
       ${locked ? `<img class="lock" src="${ICON('06')}" alt="">` : ''}</button>`;
   }).join('');
 
@@ -25,7 +25,7 @@ export function chooseKingdom(meta, onPreview) {
     picks.querySelectorAll('.kpick').forEach((b) => b.classList.toggle('sel', b.dataset.id === id));
     detail.innerHTML = `
       <h2 style="color:${k.hex}">${k.name}</h2>
-      <div class="tag">${k.color} kingdom${locked ? ` · Locked — unlock with ${k.unlock} Legacy` : ''}</div>
+      <div class="tag">${id === 'beast' ? 'Monster' : k.color} kingdom${locked ? ` · Locked — unlock with ${k.unlock} Legacy` : ''}</div>
       <div class="perk"><img src="${ICON('05')}" alt="">${k.combat}</div>
       <div class="perk"><img src="${ICON('01')}" alt="">${k.island}</div>
       <div class="perk bad"><img src="${ICON('09')}" alt="">${k.drawback}</div>`;

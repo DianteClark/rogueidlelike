@@ -2,7 +2,7 @@
 import { Terrain } from '../world/terrain.js';
 import { TILE, TERRAIN, NATURE, ICONS } from '../data/art.js';
 import { REGIONS, ENEMIES, stageEnemies, KING_AVATAR } from '../data/units.js';
-import { KINGDOMS } from '../data/kingdoms.js';
+import { KINGDOMS, kingAvatar } from '../data/kingdoms.js';
 import { power } from '../game/heroes.js';
 import { img, drawFrame, loadAll, collectSrcs } from '../engine/assets.js';
 import { rng } from '../world/generate.js';
@@ -51,7 +51,7 @@ export class MapScreen {
       this.decor = NODES.map(([x, y], i) => ({ def: (r() < 0.6 ? NATURE.bushes : NATURE.rocks)[i % 4], x: (x + (r() < 0.5 ? 0.3 : 1.5)) * T, y: (y + 0.4) * T }));
     }
     const enemySrcs = new Set(Object.values(ENEMIES).map((e) => e.avatar));
-    enemySrcs.add(KING_AVATAR(KINGDOMS[this.world.kingdom].color));
+    enemySrcs.add(kingAvatar(this.world.kingdom));
     await loadAll(enemySrcs);
     this.sel = Math.min(c.stage, R.stages);
     this.game.map = this;
@@ -126,7 +126,7 @@ export class MapScreen {
     this.terrain.drawStatic(ctx);
     for (const d of this.decor) drawFrame(ctx, d.def, 0, d.x, d.y);
 
-    const king = img(KING_AVATAR(KINGDOMS[this.world.kingdom].color));
+    const king = img(kingAvatar(this.world.kingdom));
     for (let i = 0; i < R.stages; i++) {
       const p = this.nodeCenter(i), n = i + 1;
       const done = n <= c.best, cur = n === c.stage && !done, locked = n > c.stage;

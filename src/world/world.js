@@ -28,6 +28,7 @@ export class World {
     this.events = events; // { toast(msg), changed() }
     this.kingdom = KINGDOMS[kingdom] ? kingdom : 'blue';
     this.color = KINGDOMS[this.kingdom].color;
+    this.buildSet = KINGDOMS[this.kingdom].buildings || null;
     this.res = { wood: 20, gold: 0, meat: 20 };
     this.jobs = { wood: 1, gold: 0, meat: 1, build: 1 };
     this.trees = []; this.stones = []; this.buildings = []; this.sheep = []; this.pawns = [];
@@ -47,7 +48,7 @@ export class World {
     this.terrain = new Terrain(gen.map, { color: gen.colors.flat, highColor: gen.colors.high });
     this.pen = gen.pen;
     const L = gen.layout, tr = this.terrain;
-    this.castle = this.addBuilding(new Building('castle', L.castle.x, L.castle.y, { color: this.color }));
+    this.castle = this.addBuilding(new Building('castle', L.castle.x, L.castle.y, { color: this.color, set: this.buildSet }));
     L.trees.forEach(([x, y], i) => { const t = new Tree(x, y, (x * 7 + y * 3 + i) % 4); this.trees.push(t); tr.occupied[y][x] = t; });
     L.stones.forEach(([x, y, s]) => { const g = new GoldStone(x, y, s); this.stones.push(g); tr.occupied[y][x] = g; });
     L.bushes.forEach(([x, y], i) => this.decor.push(new Decor(NATURE.bushes[i % 4], x, y, { ox: (i % 3 - 1) * 14 })));
@@ -71,7 +72,7 @@ export class World {
       this.defeated = save.defeated ?? [];
       this.campaign = { ...this.campaign, ...save.campaign };
     }
-    for (const b of buildings) this.addBuilding(new Building(b.type, b.x, b.y, { progress: b.progress ?? 1, variant: b.variant ?? 0, color: this.color }));
+    for (const b of buildings) this.addBuilding(new Building(b.type, b.x, b.y, { progress: b.progress ?? 1, variant: b.variant ?? 0, color: this.color, set: this.buildSet }));
     const sheepN = save?.sheep ?? L.sheep.length;
     for (let i = 0; i < sheepN; i++) {
       const p = L.sheep[i] ? { x: L.sheep[i][0], y: L.sheep[i][1] } : this.randomPenTile();
@@ -181,7 +182,7 @@ export class World {
 
   onBuilt(b) {
     this.fx(FX.dustBig, cx(b.x + b.w / 2 - 0.5), foot(b.y));
-    this.events.toast?.(`${b.def.name} finished!${b.def.pawns ? ` Room for ${b.def.pawns} more pawns.` : ''}`);
+    this.events.toast?.(`${b.name} finished!${b.def.pawns ? ` Room for ${b.def.pawns} more pawns.` : ''}`);
     this.events.changed?.();
   }
 
@@ -296,6 +297,13 @@ export class World {
         const r = this.raid;
         const lost = Object.entries(r.stolen).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${k}`).join(', ');
         this.events.toast?.(r.over === 'defended' ? `Raid defeated! +${r.bounty || 0} gold` : `Raiders escaped with ${lost || 'nothing'}`, 3500);
+        // Beast Horde: beaten raiders sometimes swear loyalty
+        if (r.over === 'defended' && Math.random() < this.mod('raidRecruit', 0) && this.heroes.length < this.rosterCap) {
+          const id = r.plan.enemies[Math.floor(Math.random() * r.plan.enemies.length)];
+          const h = makeHero({ cls: id }, this.kingdom); this.heroes.push(h);
+          if (!this.defeated.includes(id)) this.defeated.push(id);
+          setTimeout(() => this.events.toast?.(`A beaten ${ENEMIES[id].name} joins your horde!`, 3500), 3600);
+        }
         setTimeout(() => { this.raid = null; for (const p of this.pawns) p.unshelter?.(); this.scheduleRaid(false); this.events.changed?.(); this.save(); }, 1500);
       }
       return;
@@ -376,7 +384,7 @@ export class World {
     const cost = this.costOf(p.type);
     if (!this.canAfford(cost)) { this.events.toast?.('Not enough resources'); return false; }
     this.pay(cost);
-    const b = this.addBuilding(new Building(p.type, p.x, p.y, { progress: 0, variant: p.variant, color: this.color }));
+    const b = this.addBuilding(new Building(p.type, p.x, p.y, { progress: 0, variant: p.variant, color: this.color, set: this.buildSet }));
     this.fx(FX.dust, cx(b.x + b.w / 2 - 0.5), foot(b.y));
     this.placing = null;
     if (this.jobs.build === 0) this.events.toast?.('Assign a Builder in Pawns to construct it');
@@ -502,7 +510,7 @@ export class World {
     const p = this.placing, def = BUILDINGS[p.type];
     ctx.fillStyle = p.ok ? 'rgba(120,255,140,.28)' : 'rgba(255,80,80,.32)';
     for (let i = 0; i < def.w; i++) for (let j = 0; j < def.h; j++) ctx.fillRect((p.x + i) * T + 2, (p.y - j) * T + 2, T - 4, T - 4);
-    const ghost = new Building(p.type, p.x, p.y, { variant: p.variant, color: this.color });
+    const ghost = new Building(p.type, p.x, p.y, { variant: p.variant, color: this.color, set: this.buildSet });
     ctx.globalAlpha = 0.7; ghost.draw(ctx); ctx.globalAlpha = 1;
   }
 

@@ -145,6 +145,13 @@ export class Unit {
     // shadow
     ctx.fillStyle = 'rgba(20,40,40,.22)';
     ctx.beginPath(); ctx.ellipse(this.x, this.y - 2, 22 * (this.scale || 1), 7 * (this.scale || 1), 0, 0, Math.PI * 2); ctx.fill();
+    // team ring so your monster heroes never get mixed up with enemy monsters
+    if (!this.dead) {
+      ctx.globalAlpha = 0.85; ctx.lineWidth = 3;
+      ctx.strokeStyle = this.side === 'hero' ? (this.b.ringColor || '#7fd6ff') : '#e05a4a';
+      ctx.beginPath(); ctx.ellipse(this.x, this.y - 2, 24 * (this.scale || 1), 8 * (this.scale || 1), 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
     if (this.scale && this.scale !== 1) {
       ctx.save(); ctx.translate(this.x, this.y); ctx.scale(this.scale, this.scale);
       drawFrame(ctx, def, frame, 0, 0, this.flip, a);

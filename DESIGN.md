@@ -47,6 +47,9 @@ pick is a strategy, not just a color.
 | Yellow — Sun Republic | +15% crit chance | +1 gold per mining trip, 16h idle cap | Pawns eat 30% more food | 300 Legacy |
 | Purple — Veil Temple | Heal over time in fights | Critical heroes recover 2× faster, Monastery +2 slots | Pawns work 15% slower | 500 Legacy |
 | Black — Fallen Crown | Lifesteal | Fallen heroes leave relics 2× as strong | Raids come 30% more often | 800 Legacy |
+| Beast Horde (monsters) | Heroes move and attack 12% faster | Starts with monster heroes; beaten raiders may join | Humans only join after stage 5 | 1000 Legacy |
+
+The Beast Horde builds with Enemy Pack structures: Hollow Tree (main hall), Gnome Hut (house), Mushroom Tower, Goblin Hut (barracks), Lookout (archery), Shaman Cave (monastery). Its King is the Troll.
 
 Kingdoms are defined in `src/data/kingdoms.js`. Island passives and drawbacks that touch existing systems
 (build costs, gold, food, work speed, idle cap) are live now; combat and raid ones switch on as those systems land.

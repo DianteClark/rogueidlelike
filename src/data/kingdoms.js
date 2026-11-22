@@ -1,3 +1,5 @@
+import { WAR, ENEMY } from './art.js';
+
 // The five kingdoms. Each run you rule one; the other four become rivals.
 // mods are multipliers/bonuses the simulation reads. Ones marked (later) apply once that system exists.
 export const KINGDOMS = {
@@ -36,17 +38,39 @@ export const KINGDOMS = {
     drawback: 'Raids come 30% more often',
     mods: { relicMul: 2, raidRate: 1.3 },
   },
+
+  beast: {
+    color: 'Black', name: 'Beast Horde', hex: '#5e8a3a', unlock: 1000, buildings: 'beast',
+    king: 'troll', kingName: 'the Troll King',
+    combat: 'Heroes move and attack 12% faster',
+    island: 'Starts with monster heroes; beaten raiders may join you',
+    drawback: 'Human heroes only join after you clear stage 5',
+    monsterPool: ['spearGoblin', 'torchGoblin', 'gnoll', 'thief'], humansAfter: 5,
+    mods: { raidRecruit: 0.3 },
+  },
 };
 
-export const KINGDOM_ORDER = ['blue', 'red', 'yellow', 'purple', 'black'];
+export const KINGDOM_ORDER = ['blue', 'red', 'yellow', 'purple', 'black', 'beast'];
+
+// Until runs and Legacy exist, every kingdom is open so they can all be tried.
+export const UNLOCK_ALL_FOR_TESTING = true;
+
+export function kingAvatar(k) {
+  const K = KINGDOMS[k] || KINGDOMS.blue;
+  if (K.king === 'troll') return `${ENEMY}Troll/Troll_Avatar.png`;
+  return `${WAR}King/King Avatar/King_Avatar_0${K.avatar}.png`;
+}
 
 export const mod = (k, key, fallback = 1) => KINGDOMS[k]?.mods?.[key] ?? fallback;
 
 // --- meta progress (kept across runs) -------------------------------------------------
 const META_KEY = 'tinycrowns.meta.v1';
 export function loadMeta() {
-  try { return { legacy: 0, unlocked: ['blue'], ...JSON.parse(localStorage.getItem(META_KEY)) }; }
-  catch { return { legacy: 0, unlocked: ['blue'] }; }
+  let m;
+  try { m = { legacy: 0, unlocked: ['blue'], ...JSON.parse(localStorage.getItem(META_KEY)) }; }
+  catch { m = { legacy: 0, unlocked: ['blue'] }; }
+  if (UNLOCK_ALL_FOR_TESTING) m.unlocked = [...KINGDOM_ORDER];
+  return m;
 }
 export function saveMeta(meta) {
   try { localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch { /* ignore */ }

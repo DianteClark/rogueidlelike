@@ -188,7 +188,7 @@ img { image-rendering: pixelated; }
   border-image: url('assets/ui/banner.png') 128 fill / 26px 52px stretch;
   padding: 0 4px;
 }
-#kpicks { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; width: 100%; }
+#kpicks { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; width: 100%; }
 .kpick {
   background: none; border: 0; padding: 0; position: relative;
   aspect-ratio: 1; transition: transform .15s;
