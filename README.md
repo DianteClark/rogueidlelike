@@ -16,7 +16,7 @@ See **[DESIGN.md](DESIGN.md)** for the full game design and build order.
 Add `#reset` to the end of the URL once to wipe your save (`#reset&seed=123` to try a specific island). Add `#unlockall` once to unlock every kingdom for testing.
 
 ## What's in this build
-- Kingdom select: pick one of six kingdoms (five colours + the Beast Horde, each with a combat passive, an island passive and a drawback (four unlock with Legacy)
+- Kingdom select: pick one of six kingdoms (five colours + the Beast Horde), each with a combat passive, an island passive and a drawback (Blue is free; the rest unlock with Legacy)
 - A new random island every run (seeded generator: plateau with stairs and gold, forest, sheep meadow, castle and house), built from the Tiny Swords tilemap rules (flat ground, plateau, cliffs, stairs, animated foam, shadows)
 - Pawns with jobs: Woodcutter, Miner, Shepherd, Builder. They walk, work, climb stairs and carry resources to the castle
 - Food: pawns eat meat; new pawns arrive when there's house room and food
