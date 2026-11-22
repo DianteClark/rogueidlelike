@@ -9,6 +9,7 @@ import { Battle, ARENA_W, ARENA_H } from './battle/battle.js';
 import { REGIONS } from './data/units.js';
 import { BattleHud } from './ui/battleHud.js';
 import { MapScreen } from './ui/mapScreen.js';
+import { RunScreens } from './ui/runScreens.js';
 import { Hud } from './ui/hud.js';
 import { pawnArt, TERRAIN, NATURE, FX, BUILDINGS, buildingArt, ICONS, TILE } from './data/art.js';
 
@@ -70,6 +71,8 @@ async function boot() {
   const save = World.loadSave();
   const hud = new Hud(game);
   game.hud = hud;
+  const runs = new RunScreens(game);
+  game.runs = runs;
   const bhud = new BattleHud(game);
   game.bhud = bhud;
   game.mapScreen = new MapScreen(game);
@@ -119,6 +122,8 @@ async function boot() {
       changed: () => hud.refresh(),
       gained: (k) => hud.bump(k),
       building: (b) => hud.showBuilding(b),
+      runOver: (s) => { if (game.battle) { game.battle = null; game.bhud.hide(); } if (game.map) game.map.close(); runs.runOver(s); },
+      eraWon: () => runs.eraWon(),
       raid: (r) => { hud.toast('Raiders have landed! Pawns are running to the castle.', 3000); if (r.landing) cam.centerOn((r.landing.x + 0.5) * TILE, (r.landing.y + 0.5) * TILE); },
     }, kingdom);
     world.init(saveData, previewSeed);
@@ -156,6 +161,7 @@ async function boot() {
       const away = game.world.applyOffline((Date.now() - save.t) / 1000);
       if (away) hud.showAway(away);
     }
+    if (save.runOver) { game.world.legacyBanked = save.legacyBanked; game.world.runOver = save.runOver; runs.runOver(save.runOver); }
   } else {
     await makeWorld('blue', null);
     document.getElementById('loading').classList.add('done');

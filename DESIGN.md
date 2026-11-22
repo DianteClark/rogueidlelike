@@ -226,8 +226,8 @@ Spend between runs on:
 5. ✅ Raids: Gentle tier, guard slots, towers. *(walls, more tribes: next)*
 6. ✅ Idle rewards and "While you were away" screen.
 7. ✅ Hero states (Wounded / Critical) + Monastery beds; Real Stakes raids (shelter limit, pawn losses, wrecked buildings, repairs); Fallen heroes + Hall of Heroes relics. *(resource trips with escorts: next)*
-8. Sieges, Castle falls, run end, Legacy and the meta screen.
-9. Endless mode, share card.
+8. ✅ Sieges (Blood Moon), castle health, Castle falls → run end, Legacy earned, retire. *(Legacy shop: next)*
+9. ✅ Endless mode, share card.
 10. Polish: sound, juice, balancing, more regions as packs grow.
 
 ## 13. Pixel Frog roadmap → where it plugs in

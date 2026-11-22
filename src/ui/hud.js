@@ -45,7 +45,14 @@ export class Hud {
   raidTick() {
     const w = this.world, bar = $('#raidbar');
     if (!w) return;
-    if (w.raid && !w.raid.over) {
+    if (w.raid && !w.raid.over && w.raid.plan.tier === 'siege') {
+      bar.textContent = `BLOOD MOON — Castle ${Math.ceil(w.castleHp ?? 0)}/${w.castleMax}`;
+      bar.className = 'live';
+    } else if (!w.raid && w.siegeCountdown != null && w.siegeCountdown <= 600) {
+      const s = Math.ceil(w.siegeCountdown);
+      bar.textContent = `Blood Moon in ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+      bar.className = '';
+    } else if (w.raid && !w.raid.over) {
       const left = w.raid.enemies.filter((u) => !u.dead).length;
       bar.textContent = `Raid! ${left} raider${left === 1 ? '' : 's'} — tap to look`;
       bar.className = 'live';
@@ -257,9 +264,14 @@ export class Hud {
     const b = this.inspect; if (!b) return '';
     const status = b.done ? (b.def.pawns ? `Houses ${b.def.pawns} pawns.` : '') :
       `Under construction: ${Math.floor(b.progress * 100)}%. ${this.world.jobs.build ? '' : 'Assign a Builder!'}`;
+    const w = this.world, e = w.era;
     const extra = b.type === 'castle'
       ? `<p>The heart of your kingdom. Pawns bring resources here. If it falls in a siege, the run is over.</p>
-         <button class="sbtn wbtn" data-act="open" data-arg="jobs">Manage pawns</button>` : '';
+         <div class="stats"><div>Castle health <b>${w.castleMax}</b></div><div>Shelters <b>${w.shelterCap} pawns</b></div>
+         <div>Raids beaten <b>${e.raidsWon}</b></div><div>Sieges survived <b>${e.sieges}</b></div></div>
+         <p>${e.endless ? '<b>Endless mode.</b> ' : e.won ? '<b>Era won!</b> ' : `Era goal: conquer the Goblin Coast, then survive the Blood Moon siege. `}${w.siegeCountdown != null ? `Next siege in ${Math.ceil(w.siegeCountdown / 60)} min.` : ''}</p>
+         <div class="btnrow"><button class="sbtn wbtn" data-act="open" data-arg="jobs">Manage pawns</button><button class="sbtn wbtn" data-act="share">Share</button></div>
+         <div class="btnrow"><button class="sbtn red wbtn" data-act="retire">Retire run (+${w.runSummary('retired').legacy} Legacy)</button></div>` : '';
     return `<h2>${b.name}</h2><p>${status}</p>${extra}`;
   }
 
@@ -272,6 +284,7 @@ export class Hud {
     this.awayHtml = `<h2>While you were away</h2>
       <p>${h ? h + 'h ' : ''}${m}m passed${sum.capped ? ` (max ${sum.capH}h counted)` : ''}. Your pawns kept working:</p>
       <div class="row" style="justify-content:center;font-size:20px">${items}</div>
+      ${sum.siegeWaiting ? '<p><b style="color:#a33a2c">A Blood Moon horde waits at your shore! You have one minute to prepare.</b></p>' : ''}
       ${(sum.raids || []).map((r) => `<p>${r.won ? `⚔ Your guards beat off a raid (+${r.gold} gold).` : `⚔ Raiders hit the island and took ${Object.entries(r.lost).map(([k, n]) => n + ' ' + k).join(', ')}.${r.pawns ? ` ${r.pawns} pawn${r.pawns > 1 ? 's' : ''} lost.` : ''}${r.wrecked ? ` The ${r.wrecked} was wrecked.` : ''} Guards and towers help!`}</p>`).join('')}
       <div style="text-align:center;margin-top:8px"><button class="sbtn wbtn" data-act="closepanel">Collect</button></div>`;
     this.open('away');
@@ -293,6 +306,11 @@ export class Hud {
     if (a === 'team') { w.toggleTeam(arg); this.render(); }
     if (a === 'guard') { w.toggleGuard(arg); this.render(); }
     if (a === 'monastery') { w.toggleMonastery(arg); this.render(); }
+    if (a === 'share') import('./runScreens.js').then((m) => m.shareCard(w, w.runSummary('sharing')));
+    if (a === 'retire') {
+      if (this.confirmRetire && Date.now() - this.confirmRetire < 4000) { this.close(); w.endRun('retired'); }
+      else { this.confirmRetire = Date.now(); this.toast('Tap Retire again to end this run'); }
+    }
     if (a === 'level') { w.levelUp(arg); this.render(); }
     if (a === 'back') this.open('heroes');
     if (a === 'dismiss') { if (this.confirmDismiss === arg) { w.dismiss(arg); this.confirmDismiss = null; this.open('heroes'); } else { this.confirmDismiss = arg; this.toast('Tap Dismiss again to confirm'); } }

@@ -125,6 +125,7 @@ export class Unit {
     }
     const proj = this.projectile;
     if (proj) { this.b.projectiles.push(new Projectile(this, t, proj)); return; }
+    if (t.side === 'castle') { this.b.damage(this, t); if (this.art.splash) this.b.shake = 0.35; return; }
     const targets = this.art.splash ? this.foes.filter((u) => !u.dead && Math.hypot(u.x - t.x, u.y - t.y) < this.art.splash * T) : [t];
     for (const u of targets) this.b.damage(this, u);
     if (this.art.splash) this.b.shake = 0.35;

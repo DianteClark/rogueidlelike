@@ -12,7 +12,17 @@ const T = TILE;
 export const RAID_TIERS = {
   gentle: { name: 'Raid' },
   real: { name: 'Big raid' },   // pawns left outside can die, buildings get wrecked
+  siege: { name: 'Siege' },     // Blood Moon: a huge horde with a boss attacks the castle itself
 };
+
+export function planSiege(world) {
+  const n = world.era.sieges;
+  const pool = REGIONS[0].pool;
+  const count = Math.min(14, 8 + n * 2);
+  const enemies = ['troll', ...Array.from({ length: count }, (_, i) => pool[(i * 3 + n) % pool.length])];
+  if (n >= 2) enemies.push('troll');
+  return { tier: 'siege', tribe: 'Goblins', enemies, level: 9 + n * 2 };
+}
 
 // The raid the world schedules next, sized from campaign progress.
 export function planRaid(world) {
@@ -39,7 +49,8 @@ export class Raid {
   async prepare() {
     const w = this.world, srcs = new Set();
     for (const id of this.plan.enemies) { collectSrcs(ENEMIES[id].art, srcs); if (ENEMIES[id].projectile) srcs.add(ENEMIES[id].projectile.src); }
-    for (const h of w.guardHeroes.filter(canFight)) { const c = heroDef(h.cls); collectSrcs(c.art(h.color), srcs); if (c.projectile) srcs.add(c.projectile.src); }
+    this.defenders = this.plan.tier === 'siege' ? w.heroes.filter(canFight) : w.guardHeroes.filter(canFight);
+    for (const h of this.defenders) { const c = heroDef(h.cls); collectSrcs(c.art(h.color), srcs); if (c.projectile) srcs.add(c.projectile.src); }
     srcs.add(`${FREE}Units/Blue Units/Archer/Arrow.png`);
     collectSrcs(FX, srcs);
     await loadAll(srcs);
@@ -62,8 +73,8 @@ export class Raid {
 
     const sc = stageScale(this.plan.level);
     this.plan.enemies.forEach((id, i) => {
-      const e = ENEMIES[id];
-      const st = { ...e.stats, hp: Math.round(e.stats.hp * sc), atk: Math.round(e.stats.atk * sc), def: Math.round(e.stats.def * sc) };
+      const e = ENEMIES[id], s2 = e.boss ? 1 + (this.plan.level - 9) * 0.08 : sc;
+      const st = { ...e.stats, hp: Math.round(e.stats.hp * s2), atk: Math.round(e.stats.atk * s2), def: Math.round(e.stats.def * s2) };
       const u = new Unit(this, 'enemy', id, e.art, st, (this.landing.x + 0.5) * T + (i % 3 - 1) * 22, (this.landing.y + 0.85) * T + Math.floor(i / 3) * 14,
         { projectile: e.projectile, step: 0, carry: 0 });
       this.enemies.push(u);
@@ -72,12 +83,12 @@ export class Raid {
 
     // guard heroes come out of the castle
     const k = w.kingdom;
-    const syn = teamSynergies(w.guardHeroes.filter(canFight), k);
+    const syn = teamSynergies(this.defenders, k);
     this.ringColor = KINGDOMS[k]?.hex;
-    w.guardHeroes.filter(canFight).forEach((h, i) => {
+    this.defenders.forEach((h, i) => {
       const c = heroDef(h.cls), st = heroStats(h);
       st.atk = Math.round(st.atk * mod(k, 'heroDamage') * (1 + (w.relicBonus || 0)));
-      const u = new Unit(this, 'hero', h.cls, c.art(h.color), st, (door.x + 0.5 + (i - 1) * 0.6) * T, (door.y + 0.9) * T, { projectile: c.projectile, hero: h });
+      const u = new Unit(this, 'hero', h.cls, c.art(h.color), st, (door.x + 0.5 + ((i % 5) - 2) * 0.6) * T, (door.y + 1.1 + Math.floor(i / 5) * 0.5) * T, { projectile: c.projectile, hero: h });
       applyBonuses(u, h, syn, k);
       this.heroes.push(u);
     });
@@ -102,7 +113,7 @@ export class Raid {
       const foe = u.nearest(this.heroes);
       if (foe && Math.hypot(foe.x - u.x, foe.y - u.y) < 4 * T) { u.target = foe; return false; }
       u.target = null;
-      if (this.plan.tier === 'real' && !u.leaving && (this.kills || 0) < 3) {
+      if (this.plan.tier !== 'gentle' && !u.leaving && (this.kills || 0) < 3) {
         const prey = this.world.pawns.filter((p) => p.exposed && !p.hidden)
           .sort((a, b) => Math.hypot(a.px - u.x, a.py - u.y) - Math.hypot(b.px - u.x, b.py - u.y))[0];
         if (prey && Math.hypot(prey.px - u.x, prey.py - u.y) < 3.5 * T) {
@@ -141,6 +152,7 @@ export class Raid {
   }
 
   steal(u, dt) {
+    if (this.plan.tier === 'siege') return this.batter(u, dt);
     u.anim.set(u.art.idle);
     u.stealT = (u.stealT || 0) + dt;
     const res = this.world.res;
@@ -164,7 +176,33 @@ export class Raid {
     }
   }
 
+  // siege raiders pound the castle itself
+  batter(u, dt) {
+    const w = this.world;
+    u.cool -= 0; // attack timing reuses the unit cooldown
+    if (u.state === 'attack') return;
+    if (u.cool <= 0) {
+      const atk = u.art.attack[0];
+      u.state = 'attack'; u.hitDone = false; u.anim.def = null; u.anim.set(atk, 10, false); u.cool = u.s.rate;
+      u.target = { x: (w.castle.x + 2.5) * T, y: (w.castle.y + 0.5) * T, dead: false, head: 0, hp: 1, max: 1, side: 'castle' };
+      u.castleHit = true;
+    } else u.anim.set(u.art.idle);
+    u.wreckN = (u.wreckN || 0) + dt;
+    if (u.wreckN > 9) {
+      u.wreckN = 0;
+      const near = w.buildings.filter((b) => b !== w.castle && b.working && Math.hypot((b.x + b.w / 2) * T - u.x, (b.y + 1) * T - u.y) < 7 * T);
+      if (near.length && Math.random() < 0.5) w.wreck(near[Math.floor(Math.random() * near.length)]);
+    }
+  }
+
   damage(from, to) {
+    if (to.side === 'castle') {
+      const dmg = Math.max(1, from.s.atk * (0.9 + Math.random() * 0.2));
+      this.world.hitCastle(dmg);
+      this.text(String(Math.round(dmg)), to.x + (Math.random() - 0.5) * 80, to.y - 60, '#ffb0a0');
+      if (Math.random() < 0.2) this.fx(FX.dust, to.x + (Math.random() - 0.5) * 120, to.y + 30);
+      return;
+    }
     if (to.dead) return;
     let dmg = from.s.atk * (0.9 + Math.random() * 0.2);
     if (Math.random() < 0.05 + (from.crit || 0)) dmg *= 1.8;
@@ -188,7 +226,7 @@ export class Raid {
   update(dt) {
     this.time += dt;
     // safety: raiders give up and sail home after two minutes
-    if (this.time > 120) for (const u of this.enemies) if (!u.dead && !u.leaving) { u.leaving = true; u.step = Math.min(u.step, this.route.length - 1); }
+    if (this.time > 120 && this.plan.tier !== 'siege') for (const u of this.enemies) if (!u.dead && !u.leaving) { u.leaving = true; u.step = Math.min(u.step, this.route.length - 1); }
     for (const u of this.heroes) u.update(dt);
     for (const u of this.enemies) u.update(dt);
     for (const tw of this.towers) {
